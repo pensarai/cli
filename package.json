@@ -1,0 +1,19 @@
+{
+  "name": "@pensar/local",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@octokit/action": "^7.0.0",
+    "@pensar/semgrep-node": "^1.0.8",
+    "commander": "^12.1.0",
+    "js-tiktoken": "^1.0.14",
+    "nanoid": "^5.0.7",
+    "openai": "^4.56.0"
+  }
+}
