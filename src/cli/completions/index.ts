@@ -87,14 +87,13 @@ const buildPrSummaryPrompt = (params: PrSummaryParams) => {
 }
 
 async function getCompletion(systemMessage: string, userMessage: string, clientOptions: CompletionClientOptions) {
-    console.log(userMessage);
-
     const client = getCompletionClient(clientOptions);
 
     const resp = await client.chat.completions.create(
         {
             // model: "/home/ubuntu/pensar-local/src/server/models/DeepSeek-Coder-V2-Lite-Instruct-Q6_K.gguf",
-            model: "/home/ubuntu/pensar-local/src/server/models/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf",
+            // model: "/home/ubuntu/pensar-local/src/server/models/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf",
+            model: "gpt-4o-mini",
             messages: [
                 { role: "system", content: systemMessage },
                 { role: "user", content: userMessage }
@@ -105,7 +104,6 @@ async function getCompletion(systemMessage: string, userMessage: string, clientO
     );
 
     const result = resp.choices[0].message.content;
-    console.log(result)
     if(!result) {
         throw new Error("Model response empty");
     }
@@ -142,7 +140,6 @@ export const codeGenDiff = async(fileContent: string, issue: Issue, clientOption
         }, clientOptions)
     ]);
 
-    console.log("generating diff");
     const diff = await getCodeEdits({
         fileContent,
         snippet,
