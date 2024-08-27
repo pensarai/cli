@@ -13,5 +13,9 @@ export async function initCli() {
     .option("--github", "Specify if the CLI is being run in a github action. This will use generated fixes to create PRs instead of presenting the user the ability to locally apply patches.")
     .action(scanCommandHandler);
 
+    // program.command("init-local")
+    // .description("Download model weights and inference server binary for local Pensar usage.")
+    // .action()
+
     await program.parseAsync(process.argv);
 }

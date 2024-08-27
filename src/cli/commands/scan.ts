@@ -3,7 +3,7 @@ import { codeGenDiff, type CompletionClientOptions } from "../completions";
 import { createPr } from "./github";
 import type { Repository } from "../../lib/types";
 import { spawnLlamaCppServer } from "../../server";
-import { getFileContents } from "../utils";
+import { checkLocalConfig, getFileContents } from "../utils";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default
 
@@ -55,6 +55,10 @@ interface ScanCommandParams {
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
+    if(params.local) {
+        await checkLocalConfig();
+    }
+    
     const target = params.target??"."; // TODO: should be cwd
     
     const diffs = await _scan(target, {

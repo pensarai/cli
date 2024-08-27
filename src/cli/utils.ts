@@ -1,3 +1,6 @@
+import path from "path";
+import { readdir } from "node:fs/promises";
+
 export function applyDiffs(originalCode: string, diffBlocks: string): string {
     let lines = originalCode.split('\n');
     const diffRegex = /<diff>([\s\S]*?)<\/diff>/g;
@@ -75,4 +78,33 @@ export const getFileContents = async(path: string) => {
     }
     const contents = await file.text();
     return contents
+}
+
+const checkForLocalModels = async () => {
+    const modelDirPath = path.resolve(import.meta.dir, "../server/models");
+    const files = await readdir(modelDirPath);
+    for(let i=0;i<files.length;i++) {
+        let file = files[i];
+        if(file.includes(".gguf")) {
+            return true
+        }
+    }
+    return false
+}
+
+const checkForInferenceServerBinary = async () => {
+    const serverBinaryPath = path.resolve(import.meta.dir, "../server/lib");
+    const files = await readdir(serverBinaryPath);
+    if(files[0] === "llama-server") {
+        return true
+    }
+    return false
+}
+
+export const checkLocalConfig = async () => {
+    let modelsExist = await checkForLocalModels();
+    let inferenceServerBinaryExists = await checkForInferenceServerBinary();
+    if(!modelsExist || !inferenceServerBinaryExists) {
+        throw new Error("Missing either model weights or inference server binary. Run `pensar init-local` to download both.");
+    }
 }

@@ -4,8 +4,7 @@
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
     "module": "ESNext",
-    "moduleDetection": "force",
-    "jsx": "react-jsx",
+    "esModuleInterop": true,
     "allowJs": true,
 
     // Bundler mode
@@ -22,6 +21,11 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
-  }
+    "noPropertyAccessFromIndexSignature": false,
+    "paths": {
+      "@/*":["./src/*"]
+    },
+    "outDir": "dist",
+    "rootDir": "src"
+  },
 }

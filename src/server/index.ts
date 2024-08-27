@@ -1,4 +1,4 @@
-import { spawn } from "bun";
+import { spawn } from "child_process";
 import { modelLocation, serverBinaryLocation } from "./utils";
 
 const delay = () => {
@@ -31,9 +31,7 @@ function serverHealthCheck(): Promise<void> {
 
 export async function spawnLlamaCppServer(verbose?: boolean) {
     const pathToServerBinary = serverBinaryLocation();
-    const proc = spawn([pathToServerBinary, "-m", modelLocation(), "-c", "4096", "-t", "16"], {
-        stderr: verbose ? "inherit" : null
-    });
+    const proc = spawn(pathToServerBinary, ["-m", modelLocation(), "-c", "4096", "-t", "16"]);
     await serverHealthCheck();
     return proc
 }

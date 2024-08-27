@@ -1,19 +1,46 @@
 {
-  "name": "@pensar/local",
-  "module": "src/index.ts",
+  "name": "pensar-local",
+  "version": "1.0.0",
+  "description": "AI security engineer. Can be run fully local.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
   },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+  "bin": {
+    "pensar": "dist/index.js"
   },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --clean --minify",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pensarai/pensar-local.git"
+  },
+  "author": "PensarAI, Inc.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pensarai/pensar-local/issues"
+  },
+  "homepage": "https://github.com/pensarai/pensar-local#readme",
   "dependencies": {
     "@octokit/action": "^7.0.0",
     "@pensar/semgrep-node": "^1.0.8",
     "commander": "^12.1.0",
     "js-tiktoken": "^1.0.14",
     "nanoid": "^5.0.7",
-    "openai": "^4.56.0"
+    "openai": "^4.56.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsup": "^8.2.4",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
   }
 }

@@ -1,5 +1,5 @@
 import type { Issue } from "@pensar/semgrep-node";
-import { expect, test, describe } from "bun:test";
+import { expect, test, describe } from "vitest";
 import { codeGenDiff } from "../completions";
 
 const mockIssue: Issue = {
