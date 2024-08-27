@@ -2,6 +2,7 @@ import scan, { type Issue, type Language, type SemgrepScanOptions } from "@pensa
 import { codeGenDiff } from "../completions";
 import { createPr } from "./github";
 import type { Repository } from "../../lib/types";
+import { spawnLlamaCppServer } from "../../server";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default
 
@@ -36,11 +37,16 @@ async function dispatchPrCreation(issue: Issue, diff: string, repository: Reposi
 
 async function _scan(target: string, options: SemgrepScanOptions) {
     const issues = await runScan(target, options);
-    const diffs = await Promise.all(
-        issues.map(issue => dispatchCodeGen(issue))
-    );
-    return diffs
-    // TODO: if `--github` create PRs
+    try {
+        const proc = await spawnLlamaCppServer();
+        const diffs = await Promise.all(
+            issues.map(issue => dispatchCodeGen(issue))
+        );
+        proc.kill("SIGKILL");
+        return diffs
+    } catch(error) {
+        throw new Error(`There was an error starting the language model server: ${error}`);
+    }
     // TODO: otherwise enable user to flip thru "patches" and apply
 }
 
@@ -53,7 +59,7 @@ interface ScanCommandParams {
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
-    const target = params.target??".";
+    const target = params.target??"."; // TODO: should be cwd
     
     const diffs = await _scan(target, {
         verbose: params.verbose,
