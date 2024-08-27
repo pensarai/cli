@@ -67,3 +67,12 @@ export function applyDiffs(originalCode: string, diffBlocks: string): string {
     
     return lines.join('\n');
 }
+
+export const getFileContents = async(path: string) => {
+    const file = Bun.file(path);
+    if(!await file.exists()) {
+        throw new Error(`${path} does not exist`);
+    }
+    const contents = await file.text();
+    return contents
+}

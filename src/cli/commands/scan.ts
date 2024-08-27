@@ -3,6 +3,7 @@ import { codeGenDiff } from "../completions";
 import { createPr } from "./github";
 import type { Repository } from "../../lib/types";
 import { spawnLlamaCppServer } from "../../server";
+import { getFileContents } from "../utils";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default
 
@@ -13,15 +14,6 @@ async function runScan(target: string, options: SemgrepScanOptions) {
     }
 
     return results
-}
-
-const getFileContents = async(path: string) => {
-    const file = Bun.file(path);
-    if(!await file.exists()) {
-        throw new Error(`${path} does not exist`);
-    }
-    const contents = await file.text();
-    return contents
 }
 
 async function dispatchCodeGen(issue: Issue) {

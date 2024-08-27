@@ -27,7 +27,7 @@ interface CodeEditParams {
 };
 
 const client = new OpenAI({
-    baseURL: "http://localhost:8080/v1",
+    baseURL: "http://localhost:8080/v1/",
     apiKey: "sk-no-key-required"
 });
 
@@ -74,9 +74,11 @@ const buildPrSummaryPrompt = (params: PrSummaryParams) => {
 }
 
 async function getCompletion(systemMessage: string, userMessage: string) {
+    console.log(userMessage);
     const resp = await client.chat.completions.create(
         {
-            model: "gpt-4o-mini",
+            // model: "/home/ubuntu/pensar-local/src/server/models/DeepSeek-Coder-V2-Lite-Instruct-Q6_K.gguf",
+            model: "/home/ubuntu/pensar-local/src/server/models/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf",
             messages: [
                 { role: "system", content: systemMessage },
                 { role: "user", content: userMessage }
@@ -87,6 +89,7 @@ async function getCompletion(systemMessage: string, userMessage: string) {
     );
 
     const result = resp.choices[0].message.content;
+    console.log(result)
     if(!result) {
         throw new Error("Model response empty");
     }
@@ -112,16 +115,18 @@ const getCodeEdits = async(params: CodeEditParams) => {
 }
 
 export const codeGenDiff = async(fileContent: string, issue: Issue) => {
-    const explanation = await getExplanation({
-        fileContent: fileContent,
-        issue: issue
-    });
+    const [explanation, snippet] = await Promise.all([
+        await getExplanation({
+            fileContent: fileContent,
+            issue: issue
+        }),
+        await extractSnippet({
+            fileContent,
+            issue
+        })
+    ]);
 
-    const snippet = await extractSnippet({
-        fileContent,
-        issue
-    });
-
+    console.log("generating diff");
     const diff = await getCodeEdits({
         fileContent,
         snippet,

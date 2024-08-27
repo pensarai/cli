@@ -29,9 +29,11 @@ function serverHealthCheck(): Promise<void> {
     });
 }
 
-export async function spawnLlamaCppServer() {
+export async function spawnLlamaCppServer(verbose?: boolean) {
     const pathToServerBinary = serverBinaryLocation();
-    const proc = spawn([pathToServerBinary, "-m", modelLocation(), "-c", "4000"]);
+    const proc = spawn([pathToServerBinary, "-m", modelLocation(), "-c", "4096", "-t", "16"], {
+        stderr: verbose ? "inherit" : null
+    });
     await serverHealthCheck();
     return proc
 }
