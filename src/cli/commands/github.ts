@@ -2,7 +2,7 @@ import { Octokit } from "@octokit/action";
 import type { Issue } from "@pensar/semgrep-node";
 import type { Repository } from "../../lib/types";
 import { applyDiffs } from "../utils";
-import { getPrSummary } from "../completions";
+import { getPrSummary, type CompletionClientOptions } from "../completions";
 import { nanoid } from "nanoid";
 
 async function createPRWithChanges(
@@ -91,7 +91,8 @@ export async function createPr(
     oldContent: string,
     issue: Issue,
     diff: string,
-    repository: Repository
+    repository: Repository,
+    completionClientOptions: CompletionClientOptions
 ) {
     const octokit = new Octokit();
 
@@ -101,7 +102,7 @@ export async function createPr(
         issue,
         oldContent,
         newContent
-    });
+    }, completionClientOptions);
 
     await createPRWithChanges(
         octokit,

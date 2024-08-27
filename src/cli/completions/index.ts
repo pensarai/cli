@@ -26,10 +26,23 @@ interface CodeEditParams {
     explanation: string;
 };
 
-const client = new OpenAI({
-    baseURL: "http://localhost:8080/v1/",
-    apiKey: "sk-no-key-required"
-});
+export interface CompletionClientOptions {
+    oaiApiKey?: string;
+    local?: boolean;
+};
+
+const getCompletionClient = (options: CompletionClientOptions) => {
+    let baseUrl = options.local ? "http://localhost:8080/v1/" : undefined;
+    let oaiApiKey = options.oaiApiKey??process.env.OPENAI_API_KEY;
+    if(!options.local && !oaiApiKey) {
+        throw new Error("OpenAI API key required if not using `--local` option. Pass OpenAI API key as either the `OPENAI_API_KEY` env variable or to `--api_key` option.");
+    }
+    const client = new OpenAI({
+        baseURL: baseUrl,
+        apiKey: options.local ? "sk-no-key-required" : oaiApiKey
+    });
+    return client
+}
 
 export const numTokens = (content: string) => {
     const enc = getEncoding("cl100k_base");
@@ -73,8 +86,11 @@ const buildPrSummaryPrompt = (params: PrSummaryParams) => {
                                 .replace("<new_content>", params.newContent);
 }
 
-async function getCompletion(systemMessage: string, userMessage: string) {
+async function getCompletion(systemMessage: string, userMessage: string, clientOptions: CompletionClientOptions) {
     console.log(userMessage);
+
+    const client = getCompletionClient(clientOptions);
+
     const resp = await client.chat.completions.create(
         {
             // model: "/home/ubuntu/pensar-local/src/server/models/DeepSeek-Coder-V2-Lite-Instruct-Q6_K.gguf",
@@ -96,34 +112,34 @@ async function getCompletion(systemMessage: string, userMessage: string) {
     return result
 }
 
-const getExplanation = async(params: ErrorFixExplanationParams) => {
+const getExplanation = async(params: ErrorFixExplanationParams, clientOptions: CompletionClientOptions) => {
     const userMessage = buildExplanationPrompt(params.fileContent, params.issue);
-    const resp = await getCompletion(OAI_EXPLANATION_SYSTEM_MESSAGE, userMessage);
+    const resp = await getCompletion(OAI_EXPLANATION_SYSTEM_MESSAGE, userMessage, clientOptions);
     return resp
 }
 
-const extractSnippet = async(params: ExtractSnippetParams) => {
+const extractSnippet = async(params: ExtractSnippetParams, clientOptions: CompletionClientOptions) => {
     const userMessage = buildExtractionPrompt(params.fileContent, params.issue.startLineNumber, params.issue.endLineNumber);
-    const resp = await getCompletion(OAI_EXTRACT_SNIPPET_SYSTEM_MESSAGE, userMessage);
+    const resp = await getCompletion(OAI_EXTRACT_SNIPPET_SYSTEM_MESSAGE, userMessage, clientOptions);
     return resp
 }
 
-const getCodeEdits = async(params: CodeEditParams) => {
+const getCodeEdits = async(params: CodeEditParams, clientOptions: CompletionClientOptions) => {
     const userMessage = buildCodePrompt(params.fileContent, params.snippet, params.issue, params.explanation);
-    const resp = await getCompletion(OAI_SYSTEM_MESSAGE, userMessage);
+    const resp = await getCompletion(OAI_SYSTEM_MESSAGE, userMessage, clientOptions);
     return resp
 }
 
-export const codeGenDiff = async(fileContent: string, issue: Issue) => {
+export const codeGenDiff = async(fileContent: string, issue: Issue, clientOptions: CompletionClientOptions) => {
     const [explanation, snippet] = await Promise.all([
         await getExplanation({
             fileContent: fileContent,
-            issue: issue
-        }),
+            issue: issue,
+        }, clientOptions),
         await extractSnippet({
             fileContent,
             issue
-        })
+        }, clientOptions)
     ]);
 
     console.log("generating diff");
@@ -132,14 +148,14 @@ export const codeGenDiff = async(fileContent: string, issue: Issue) => {
         snippet,
         issue,
         explanation
-    });
+    }, clientOptions);
 
     return diff
 }
 
-export const getPrSummary = async(params: PrSummaryParams) => {
+export const getPrSummary = async(params: PrSummaryParams, clientOptions: CompletionClientOptions) => {
     const userMessage = buildPrSummaryPrompt(params);
-    const resp = await getCompletion(OAI_PR_SUMMARY_SYSTEM_MESSAGE, userMessage);
+    const resp = await getCompletion(OAI_PR_SUMMARY_SYSTEM_MESSAGE, userMessage, clientOptions);
     // TODO: strip markdown
     return resp
 }

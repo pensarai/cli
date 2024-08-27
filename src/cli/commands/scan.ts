@@ -1,5 +1,5 @@
 import scan, { type Issue, type Language, type SemgrepScanOptions } from "@pensar/semgrep-node";
-import { codeGenDiff } from "../completions";
+import { codeGenDiff, type CompletionClientOptions } from "../completions";
 import { createPr } from "./github";
 import type { Repository } from "../../lib/types";
 import { spawnLlamaCppServer } from "../../server";
@@ -16,25 +16,26 @@ async function runScan(target: string, options: SemgrepScanOptions) {
     return results
 }
 
-async function dispatchCodeGen(issue: Issue) {
+async function dispatchCodeGen(issue: Issue, completionClientOptions: CompletionClientOptions) {
     const contents = await getFileContents(issue.location);
-    const diff = await codeGenDiff(contents, issue);
+    const diff = await codeGenDiff(contents, issue, completionClientOptions);
     return { diff, issue }
 }
 
-async function dispatchPrCreation(issue: Issue, diff: string, repository: Repository) {
+async function dispatchPrCreation(issue: Issue, diff: string, repository: Repository, completionClientOptions: CompletionClientOptions) {
     const contents = await getFileContents(issue.location);
-    await createPr(contents, issue, diff, repository);
+    await createPr(contents, issue, diff, repository, completionClientOptions);
 }
 
-async function _scan(target: string, options: SemgrepScanOptions) {
+async function _scan(target: string, options: SemgrepScanOptions, completionClientOptions: CompletionClientOptions) {
     const issues = await runScan(target, options);
     try {
-        const proc = await spawnLlamaCppServer();
+        if(completionClientOptions.local) {
+            const proc = await spawnLlamaCppServer();
+        }
         const diffs = await Promise.all(
-            issues.map(issue => dispatchCodeGen(issue))
+            issues.map(issue => dispatchCodeGen(issue, completionClientOptions))
         );
-        proc.kill("SIGKILL");
         return diffs
     } catch(error) {
         throw new Error(`There was an error starting the language model server: ${error}`);
@@ -48,6 +49,9 @@ interface ScanCommandParams {
     language?: Language;
     verbose?: boolean;
     ruleSets?: string[];
+    local?: boolean;
+    api_key?: string;
+
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
@@ -57,7 +61,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         verbose: params.verbose,
         language: params.language??"ts", // TODO: auto-detect or pass some sane default (pass multiple?)
         ruleSets: params.ruleSets
-    });
+    }, { local: params.local, oaiApiKey: params.api_key });
 
     if(params.github) {
         let token = process.env.GITHUB_TOKEN;
@@ -71,7 +75,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         let [owner, name] = repo.split("/");
         console.log("--- Creating Github PRs ---");
         await Promise.all(
-            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }))
+            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, oaiApiKey: params.api_key }))
         );
         console.log(`Successfully created ${diffs.length} PRs`);
     }

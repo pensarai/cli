@@ -1,10 +1,6 @@
 import type { Issue } from "@pensar/semgrep-node";
-import { expect, test, describe, beforeAll, afterAll } from "bun:test";
+import { expect, test, describe } from "bun:test";
 import { codeGenDiff } from "../completions";
-import { spawnLlamaCppServer } from "../../server";
-import { connect, type Subprocess } from "bun";
-import { getFileContents } from "../utils";
-import OpenAI from "openai";
 
 const mockIssue: Issue = {
     location: "./artifacts/insecure-document.js",
@@ -45,34 +41,24 @@ function ok2() {
 }`;
 
 describe("Test completions endpoint", () => {
-    let proc: Subprocess<"ignore", "pipe", null>;
+    // let proc: Subprocess<"ignore", "pipe", null>;
 
-    beforeAll(async () => {
-        console.log("Starting llama-cpp server...");
-        proc = await spawnLlamaCppServer();
-        console.log("Server started");
-    });
+    // beforeAll(async () => {
+    //     console.log("Starting llama-cpp server...");
+    //     proc = await spawnLlamaCppServer();
+    //     console.log("Server started");
+    // });
 
-    afterAll(() => {
-        console.log("Cleaning server...");
-        if(proc) {
-            proc.kill("SIGKILL");
-        }
-        console.log("Done");
-    });
-
-    test("List deepseek model", async () => {
-        const client = new OpenAI({
-            baseURL: "http://localhost:8080/v1/",
-            apiKey: "sk-no-key-required"
-        });
-
-        const models = await client.models.list();
-        expect(models.data[0].id.split("/").slice(-1)[0]).toBe("DeepSeek-Coder-V2-Lite-Instruct-Q6_K.gguf");
-    });
+    // afterAll(() => {
+    //     console.log("Cleaning server...");
+    //     if(proc) {
+    //         proc.kill("SIGKILL");
+    //     }
+    //     console.log("Done");
+    // });
 
     test("Diff generation", async () => {
-        const diff = await codeGenDiff(fileContents, mockIssue);
+        const diff = await codeGenDiff(fileContents, mockIssue, { local: false });
         console.log(diff);
         expect(diff.length).toBeGreaterThan(0);
     }, { timeout: 10_000*10 });
