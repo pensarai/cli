@@ -1,5 +1,6 @@
 import path from "path";
 import { readdir } from "node:fs/promises";
+import fs from "fs";
 
 export function applyDiffs(originalCode: string, diffBlocks: string): string {
     let lines = originalCode.split('\n');
@@ -72,16 +73,12 @@ export function applyDiffs(originalCode: string, diffBlocks: string): string {
 }
 
 export const getFileContents = async(path: string) => {
-    const file = Bun.file(path);
-    if(!await file.exists()) {
-        throw new Error(`${path} does not exist`);
-    }
-    const contents = await file.text();
+    const contents = fs.readFileSync(path, 'utf-8');
     return contents
 }
 
 const checkForLocalModels = async () => {
-    const modelDirPath = path.resolve(import.meta.dir, "../server/models");
+    const modelDirPath = path.resolve(__dirname, "../server/models");
     const files = await readdir(modelDirPath);
     for(let i=0;i<files.length;i++) {
         let file = files[i];
@@ -93,7 +90,7 @@ const checkForLocalModels = async () => {
 }
 
 const checkForInferenceServerBinary = async () => {
-    const serverBinaryPath = path.resolve(import.meta.dir, "../server/lib");
+    const serverBinaryPath = path.resolve(__dirname, "../server/lib");
     const files = await readdir(serverBinaryPath);
     if(files[0] === "llama-server") {
         return true

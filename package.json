@@ -2,8 +2,8 @@
   "name": "pensar-local",
   "version": "1.0.0",
   "description": "AI security engineer. Can be run fully local.",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "type": "module",
   "exports": {
     ".": {
@@ -12,7 +12,7 @@
     }
   },
   "bin": {
-    "pensar": "dist/index.js"
+    "pensar": "./dist/index.js"
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --clean --minify",
