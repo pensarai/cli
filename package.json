@@ -30,7 +30,7 @@
   "homepage": "https://github.com/pensarai/pensar-local#readme",
   "dependencies": {
     "@octokit/action": "^7.0.0",
-    "@pensar/semgrep-node": "^1.0.8",
+    "@pensar/semgrep-node": "^1.1.0",
     "commander": "^12.1.0",
     "js-tiktoken": "^1.0.14",
     "nanoid": "^5.0.7",

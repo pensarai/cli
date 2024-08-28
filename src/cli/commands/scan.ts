@@ -12,7 +12,6 @@ async function runScan(target: string, options: SemgrepScanOptions) {
     if(options.verbose) {
         console.debug(results);
     }
-
     return results
 }
 
@@ -29,6 +28,10 @@ async function dispatchPrCreation(issue: Issue, diff: string, repository: Reposi
 
 async function _scan(target: string, options: SemgrepScanOptions, completionClientOptions: CompletionClientOptions) {
     const issues = await runScan(target, options);
+    if(issues.length === 0) {
+        console.log("Nice. No issues found.");
+        return
+    }
     try {
         if(completionClientOptions.local) {
             const proc = await spawnLlamaCppServer();
@@ -43,7 +46,7 @@ async function _scan(target: string, options: SemgrepScanOptions, completionClie
     // TODO: otherwise enable user to flip thru "patches" and apply
 }
 
-interface ScanCommandParams {
+export interface ScanCommandParams {
     target?: string;
     github?: boolean;
     language?: Language;
@@ -51,10 +54,11 @@ interface ScanCommandParams {
     ruleSets?: string[];
     local?: boolean;
     api_key?: string;
-
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
+    // TODO: respect .gitignore when scanning --> @pensar/semgrep
+    // TODO: implement // @pensar-ok tags
     if(params.local) {
         await checkLocalConfig();
     }
@@ -66,6 +70,11 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         language: params.language??"ts", // TODO: auto-detect or pass some sane default (pass multiple?)
         ruleSets: params.ruleSets
     }, { local: params.local, oaiApiKey: params.api_key });
+
+    
+    if(!diffs) {
+        return
+    }
 
     if(params.github) {
         let token = process.env.GITHUB_TOKEN;
