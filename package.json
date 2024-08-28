@@ -1,5 +1,5 @@
 {
-  "name": "pensar-local",
+  "name": "@pensar/cli",
   "version": "1.0.0",
   "description": "AI security engineer. Can be run fully local.",
   "main": "./dist/index.js",

@@ -1,0 +1,14 @@
+name: "Pensar scan"
+description: "Scan for and automatically fix security vulnerabilities in your codebase."
+inputs:
+  language:
+    description: "Target language"
+    required: true
+    default: "ts"
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.language }}
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
