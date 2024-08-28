@@ -4,6 +4,8 @@ import { createPr } from "./github";
 import type { Repository } from "../../lib/types";
 import { spawnLlamaCppServer } from "../../server";
 import { checkLocalConfig, getFileContents } from "../utils";
+import { displayDiffs } from "./apply-patch";
+import ora from "ora";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default
 
@@ -29,7 +31,6 @@ async function dispatchPrCreation(issue: Issue, diff: string, repository: Reposi
 async function _scan(target: string, options: SemgrepScanOptions, completionClientOptions: CompletionClientOptions) {
     const issues = await runScan(target, options);
     if(issues.length === 0) {
-        console.log("Nice. No issues found.");
         return
     }
     try {
@@ -63,18 +64,28 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         await checkLocalConfig();
     }
     
-    const target = params.target??"."; // TODO: should be cwd
-    
+    const target = params.target??process.cwd(); // TODO: should be cwd
+
+    // let spinner = ora({
+    //     text: `\tRunning scan in ${target}...`,
+    //     stream: process.stdout,
+    //     discardStdin: true
+    // }).start();
+
+    console.log(`Running scan on ${target}`);
+
     const diffs = await _scan(target, {
         verbose: params.verbose,
         language: params.language??"ts", // TODO: auto-detect or pass some sane default (pass multiple?)
         ruleSets: params.ruleSets
     }, { local: params.local, oaiApiKey: params.api_key });
-
     
     if(!diffs) {
+        console.log("Nice. No issues found.");
+        // spinner = spinner.succeed("\tNice. No issues found.");
         return
     }
+    // spinner.stop();
 
     if(params.github) {
         let token = process.env.GITHUB_TOKEN;
@@ -91,7 +102,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
             diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, oaiApiKey: params.api_key }))
         );
         console.log(`Successfully created ${diffs.length} PRs`);
+    } else {
+        displayDiffs(diffs);
     }
-
-    // TODO: present `apply-patch` UX
 }
