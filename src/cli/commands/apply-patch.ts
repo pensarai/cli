@@ -27,9 +27,9 @@ function formatDiff(diffText: string) {
 
 function displayCurrentDiff(diff: Diff) {
     console.clear();
-    console.log(`${chalk.bgWhite.black(`Issue: ${diff.issue.issueId}`)} ${diff.status ? chalk.green.bold(diff.status): ""}`);
+    console.log(`${chalk.bgWhite.black(`Issue: ${diff.issue.issueId}`)} ${diff.status ? (diff.status === "applied" ? chalk.green.bold(diff.status): chalk.yellow.bold(diff.status)): ""}`);
     console.log(formatDiff(diff.diff));
-    console.log("\n(Use arrow keys to navigate, 'a' to apply, 'x' to iqnore, and 'q' to exit)");
+    console.log("\n(Use <- -> arrow keys to navigate, 'a' to apply, 'x' to iqnore, and 'q' to exit)");
 }
 
 
@@ -62,8 +62,10 @@ function applyIgnore(contents: string, start: number, end: number) {
     }
 
     const commentLineIndex = start - 1;
+    let line = lines[commentLineIndex];
+    let tabsOrSpaces = line.split("").filter(v => v==="\t"||v===" ");
 
-    lines.splice(commentLineIndex, 0, '// @pensar-ok');
+    lines.splice(commentLineIndex, 0, `${tabsOrSpaces.join("")}// @pensar-ok`);
 
     return lines.join('\n');
 }
@@ -76,7 +78,6 @@ async function ignoreIssue(issue: Issue) {
         // Read the file contents
         const contents = await fs.readFile(fullPath, 'utf8');
     
-        // Apply the diffs
         const modifiedContents = applyIgnore(contents, issue.startLineNumber, issue.endLineNumber);
     
         // Write the modified contents back to the file
@@ -124,15 +125,17 @@ export function displayDiffs(diffs: Diff[]) {
             currentDiff--;
             displayCurrentDiff(diffs[currentDiff]);
         } else if (key.name === "a") {
-            await processFileWithDiffs(diffs[currentDiff].issue.location, diffs[currentDiff].diff);
-            diffs = setDiffStatusAtIndex(diffs, currentDiff, "applied");
-            displayCurrentDiff(diffs[currentDiff]);
-            console.log(chalk.green("\nDiff applied!"));
+            if(!diffs[currentDiff].status) {
+                await processFileWithDiffs(diffs[currentDiff].issue.location, diffs[currentDiff].diff);
+                diffs = setDiffStatusAtIndex(diffs, currentDiff, "applied");
+                displayCurrentDiff(diffs[currentDiff]);
+            }
         } else if (key.name === "x") {
-            await ignoreIssue(diffs[currentDiff].issue);
-            diffs = setDiffStatusAtIndex(diffs, currentDiff, "ignored");
-            displayCurrentDiff(diffs[currentDiff]);
-            console.log("\nIgnored issue.");
+            if(!diffs[currentDiff].status) {
+                await ignoreIssue(diffs[currentDiff].issue);
+                diffs = setDiffStatusAtIndex(diffs, currentDiff, "ignored");
+                displayCurrentDiff(diffs[currentDiff]);
+            }
         }
     });
 }
