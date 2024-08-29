@@ -1,6 +1,6 @@
 {
   "name": "@pensar/cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI security engineer. Can be run fully local.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

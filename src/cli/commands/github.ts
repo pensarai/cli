@@ -76,6 +76,8 @@ async function createPRWithChanges(
 }
 
 function normalizeFilePath(filepath: string): string {
+    filepath = filepath.replace("github/workspace/", "");
+
     // Remove drive letter if present (for Windows paths)
     filepath = filepath.replace(/^[a-zA-Z]:/, '');
     
