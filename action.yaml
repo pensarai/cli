@@ -22,5 +22,4 @@ runs:
     - ${{ inputs.language }}
     - ${{ inputs.local }}
   env:
-    GITHUB_TOKEN: ${{ inputs.github_token }}
     OPENAI_API_KEY: ${{ inputs.openai_api_key }}
