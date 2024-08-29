@@ -15,6 +15,9 @@ inputs:
     description: "Run Pensar fully locally using our opensource models. This will require a larger action runner to use."
     required: false
     default: "false"
+permissions:
+  contents: write
+  pull-requests: write
 runs:
   using: "docker"
   image: "Dockerfile"
