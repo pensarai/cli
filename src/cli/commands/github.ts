@@ -76,6 +76,7 @@ async function createPRWithChanges(
 }
 
 function normalizeFilePath(filepath: string): string {
+    // TODO: this should be more general if/when we allow users to run on their machine with `--github` flag
     filepath = filepath.replace("github/workspace/", "");
 
     // Remove drive letter if present (for Windows paths)

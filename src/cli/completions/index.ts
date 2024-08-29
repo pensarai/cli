@@ -153,8 +153,7 @@ export const codeGenDiff = async(fileContent: string, issue: Issue, clientOption
 export const getPrSummary = async(params: PrSummaryParams, clientOptions: CompletionClientOptions) => {
     const userMessage = buildPrSummaryPrompt(params);
     const resp = await getCompletion(OAI_PR_SUMMARY_SYSTEM_MESSAGE, userMessage, clientOptions);
-    // TODO: strip markdown
-    return resp
+    return resp.replace("```", "");
 }
 
 
