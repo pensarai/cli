@@ -2,6 +2,9 @@ on: [workflow_dispatch]
 
 jobs:
   pensar_action_job:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     name: Pensar scan
     steps:
