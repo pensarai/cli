@@ -1,3 +1,3 @@
 #!/bin/sh -l
 
-pensar -lang $1 --github
+pensar scan -lang $1 --github
