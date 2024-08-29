@@ -9,6 +9,6 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Run scan
-        uses: actions/pensar-action@latest
+        uses: pensarai/pensar-local@latest
         with:
           language: "ts"
