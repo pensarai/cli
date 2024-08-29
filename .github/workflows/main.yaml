@@ -1,0 +1,14 @@
+on: [workflow_dispatch]
+
+jobs:
+  pensar_action_job:
+    runs-on: ubuntu-latest
+    name: Pensar scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run scan
+        uses: actions/pensar-action@latest
+        with:
+          language: "ts"
