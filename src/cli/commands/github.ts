@@ -1,6 +1,6 @@
 import { Octokit } from "@octokit/action";
 import type { Issue } from "@pensar/semgrep-node";
-import type { Repository } from "../../lib/types";
+import type { IssueItem, Repository } from "../../lib/types";
 import { applyDiffs } from "../utils";
 import { getPrSummary, type CompletionClientOptions } from "../completions";
 import { nanoid } from "nanoid";
@@ -68,7 +68,7 @@ async function createPRWithChanges(
         });
 
         console.log(`Pull request created: ${prData.html_url}`);
-        return prData.number;
+        return prData.html_url;
     } catch (error) {
         console.error('Error creating pull request:', error);
         throw error;
@@ -92,7 +92,7 @@ function normalizeFilePath(filepath: string): string {
 
 export async function createPr(
     oldContent: string,
-    issue: Issue,
+    issue: IssueItem,
     diff: string,
     repository: Repository,
     completionClientOptions: CompletionClientOptions
@@ -107,7 +107,7 @@ export async function createPr(
         newContent
     }, completionClientOptions);
 
-    await createPRWithChanges(
+    const prUrl = await createPRWithChanges(
         octokit,
         repository.owner,
         repository.name,
@@ -119,4 +119,5 @@ export async function createPr(
         `Fixing security issue found by Pensar: ${issue.message}`,
         prSummary
     );
+    return prUrl
 }

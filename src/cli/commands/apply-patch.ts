@@ -4,10 +4,11 @@ import readline from "readline";
 import fs from "fs/promises";
 import path from "path";
 import { applyDiffs } from "../utils";
+import type { IssueItem } from "@/lib/types";
 
 type Diff = {
     diff: string;
-    issue: Issue;
+    issue: IssueItem;
     status?: "applied" | "ignored";
 };
 
