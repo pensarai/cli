@@ -1,13 +1,13 @@
-import scan, { type Issue, type Language, type SemgrepScanOptions } from "@pensar/semgrep-node";
+import scan, { type Language, type SemgrepScanOptions } from "@pensar/semgrep-node";
 import { codeGenDiff, type CompletionClientOptions } from "../completions";
 import { createPr } from "./github";
 import type { IssueItem, Repository } from "../../lib/types";
 import { spawnLlamaCppServer } from "../../server";
 import { checkLocalConfig, getFileContents } from "../utils";
 import { displayDiffs } from "./apply-patch";
-import ora from "ora";
 import { nanoid } from "nanoid";
 import { logScanResultsToConsole, updateIssueCloseStatus } from "../metrics";
+import { renderScanLoader } from "../views/out";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default (Update: it does not - atleast seems not to)
 
@@ -87,13 +87,10 @@ export async function scanCommandHandler(params: ScanCommandParams) {
     
     const target = params.target??process.cwd();
 
-    // let spinner = ora({
-    //     text: `\tRunning scan in ${target}...`,
-    //     stream: process.stdout,
-    //     discardStdin: true
-    // }).start();
-
-    console.log(`Running scan on ${target}`);
+    let clearLoader: any;
+    if(!params.github) {
+        clearLoader = renderScanLoader();
+    }
 
     const diffs = await _scan(target, {
         verbose: params.verbose,
@@ -102,11 +99,17 @@ export async function scanCommandHandler(params: ScanCommandParams) {
     }, { local: params.local, oaiApiKey: params.api_key });
     
     if(!diffs) {
+        if(clearLoader) {
+            clearLoader();
+        }
         console.log("Nice. No issues found.");
         return;
     }
-    // spinner.stop();
+
     const endTime = Date.now();
+    if(clearLoader) {
+        clearLoader();
+    }
 
     if(params.github) {
         let token = process.env.GITHUB_TOKEN;
