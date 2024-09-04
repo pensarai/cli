@@ -1,5 +1,7 @@
 import { Command } from "commander";
 import { scanCommandHandler, type ScanCommandParams } from "./commands/scan";
+import { renderMainView } from "./views/out";
+import type { Diff } from "./commands/apply-patch";
 
 export async function initCli() {
 
@@ -25,6 +27,40 @@ export async function initCli() {
             no_metrics: options.no_metrics
         };
         await scanCommandHandler(params);
+    });
+
+    program.command("text")
+    .action(() => {
+        let diffs: Diff[] = [
+            {
+                diff: "TESTING",
+                issue: {
+                    uid: "tetetet",
+                    location: "",
+                    startLineNumber: 10,
+                    endLineNumber: 11,
+                    scanId: "sadadasd",
+                    message: "TEST MESSAGE",
+                    severity: "high",
+                    issueId: "test-issue-1"
+                }
+            },
+            {
+                diff: "TESTING",
+                issue: {
+                    uid: "rrrrrr",
+                    location: "",
+                    startLineNumber: 10,
+                    endLineNumber: 11,
+                    scanId: "sadadasd",
+                    message: "TEST MESSAGE",
+                    severity: "high",
+                    issueId: "test-issue-2"
+                }
+            },
+
+        ];
+        renderMainView(diffs);
     });
 
     // TODO: implement model weight and inference server binary downloading for use w/ `--local`

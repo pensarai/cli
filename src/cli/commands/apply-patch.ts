@@ -5,8 +5,9 @@ import fs from "fs/promises";
 import path from "path";
 import { applyDiffs } from "../utils";
 import type { IssueItem } from "@/lib/types";
+import { renderMainView } from "../views/out";
 
-type Diff = {
+export type Diff = {
     diff: string;
     issue: IssueItem;
     status?: "applied" | "ignored";
@@ -35,7 +36,7 @@ function displayCurrentDiff(diff: Diff) {
 
 
 
-async function processFileWithDiffs(filePath: string, diff: string) {
+export async function processFileWithDiffs(filePath: string, diff: string) {
     try {
       // Resolve the full path
       const fullPath = path.resolve(filePath);
@@ -71,7 +72,7 @@ function applyIgnore(contents: string, start: number, end: number) {
     return lines.join('\n');
 }
 
-async function ignoreIssue(issue: Issue) {
+export async function ignoreIssue(issue: Issue) {
     try {
         // Resolve the full path
         const fullPath = path.resolve(issue.location);
@@ -107,36 +108,38 @@ function setDiffStatusAtIndex(diffs: Diff[], index: number, status: "applied" | 
 }
 
 export function displayDiffs(diffs: Diff[]) {
-    let currentDiff = 0;
+    renderMainView(diffs);
+    
+    // let currentDiff = 0;
 
     
-    readline.emitKeypressEvents(process.stdin);
-    if(process.stdin.isTTY) {
-        process.stdin.setRawMode(true);
-    }
-    displayCurrentDiff(diffs[0]);
+    // readline.emitKeypressEvents(process.stdin);
+    // if(process.stdin.isTTY) {
+    //     process.stdin.setRawMode(true);
+    // }
+    // displayCurrentDiff(diffs[0]);
 
-    process.stdin.on('keypress', async (str, key) => {
-        if(key.name === "q") {
-            process.exit();
-        } else if (key.name === "right" && currentDiff < diffs.length - 1) {
-            currentDiff++;
-            displayCurrentDiff(diffs[currentDiff]);
-        } else if (key.name === "left" && currentDiff > 0) {
-            currentDiff--;
-            displayCurrentDiff(diffs[currentDiff]);
-        } else if (key.name === "a") {
-            if(!diffs[currentDiff].status) {
-                await processFileWithDiffs(diffs[currentDiff].issue.location, diffs[currentDiff].diff);
-                diffs = setDiffStatusAtIndex(diffs, currentDiff, "applied");
-                displayCurrentDiff(diffs[currentDiff]);
-            }
-        } else if (key.name === "x") {
-            if(!diffs[currentDiff].status) {
-                await ignoreIssue(diffs[currentDiff].issue);
-                diffs = setDiffStatusAtIndex(diffs, currentDiff, "ignored");
-                displayCurrentDiff(diffs[currentDiff]);
-            }
-        }
-    });
+    // process.stdin.on('keypress', async (str, key) => {
+    //     if(key.name === "q") {
+    //         process.exit();
+    //     } else if (key.name === "right" && currentDiff < diffs.length - 1) {
+    //         currentDiff++;
+    //         displayCurrentDiff(diffs[currentDiff]);
+    //     } else if (key.name === "left" && currentDiff > 0) {
+    //         currentDiff--;
+    //         displayCurrentDiff(diffs[currentDiff]);
+    //     } else if (key.name === "a") {
+    //         if(!diffs[currentDiff].status) {
+    //             await processFileWithDiffs(diffs[currentDiff].issue.location, diffs[currentDiff].diff);
+    //             diffs = setDiffStatusAtIndex(diffs, currentDiff, "applied");
+    //             displayCurrentDiff(diffs[currentDiff]);
+    //         }
+    //     } else if (key.name === "x") {
+    //         if(!diffs[currentDiff].status) {
+    //             await ignoreIssue(diffs[currentDiff].issue);
+    //             diffs = setDiffStatusAtIndex(diffs, currentDiff, "ignored");
+    //             displayCurrentDiff(diffs[currentDiff]);
+    //         }
+    //     }
+    // });
 }

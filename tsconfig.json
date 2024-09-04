@@ -6,6 +6,7 @@
     "module": "ESNext",
     "esModuleInterop": true,
     "allowJs": true,
+    "jsx": "react",
 
     // Bundler mode
     "moduleResolution": "bundler",
@@ -26,6 +27,7 @@
       "@/*":["./src/*"]
     },
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
   },
+  "exclude": ["./src/cli/views/out.ts"]
 }
