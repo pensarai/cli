@@ -32,7 +32,7 @@ async function dispatchPrCreation(issue: IssueItem, diff: string, repository: Re
         try {
             await updateIssueCloseStatus(issue.scanId, issue.uid, {
                 pullRequest: prUrl,
-                apiKey: completionClientOptions.oaiApiKey??""
+                apiKey: completionClientOptions.pensarApiKey??""
             });
         } catch(error) {
             console.error("Error updating issue status with PR url: ", error);
@@ -93,7 +93,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         verbose: params.verbose,
         language: params.language??"ts", // TODO: auto-detect or pass some sane default (pass multiple?)
         ruleSets: params.ruleSets
-    }, { local: params.local, oaiApiKey: params.api_key });
+    }, { local: params.local, pensarApiKey: params.api_key });
     
     if(!diffs) {
         clearLoader.unmount();
@@ -127,7 +127,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         }
         console.log("--- Creating Github PRs ---");
         await Promise.all(
-            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, oaiApiKey: params.api_key }, params.no_metrics))
+            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, pensarApiKey: params.api_key }, params.no_metrics))
         );
         console.log(`Successfully created ${diffs.length} PRs`);
     } else {
