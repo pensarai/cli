@@ -87,10 +87,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
     
     const target = params.target??process.cwd();
 
-    let clearLoader: any;
-    if(!params.github) {
-        clearLoader = renderScanLoader();
-    }
+    let clearLoader = renderScanLoader();
 
     const diffs = await _scan(target, {
         verbose: params.verbose,
@@ -99,17 +96,13 @@ export async function scanCommandHandler(params: ScanCommandParams) {
     }, { local: params.local, oaiApiKey: params.api_key });
     
     if(!diffs) {
-        if(clearLoader) {
-            clearLoader();
-        }
+        clearLoader.unmount();
         console.log("Nice. No issues found.");
         return;
     }
 
     const endTime = Date.now();
-    if(clearLoader) {
-        clearLoader();
-    }
+    clearLoader.unmount();
 
     if(params.github) {
         let token = process.env.GITHUB_TOKEN;
