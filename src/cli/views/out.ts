@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { render, Box, Text, useStdin, useInput, Spacer } from "ink";
+import React, { useEffect, useRef, useState } from "react";
+import { render, Box, Text, useStdin, useInput, Spacer, measureElement } from "ink";
 import { ignoreIssue, processFileWithDiffs } from "../commands/apply-patch";
-import { VerticalDivider } from "./divider";
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
+import { parseUnixDiff } from "./parseDiff";
 const DiffListItem = ({
   diff,
   active
@@ -20,13 +20,45 @@ const DiffListItem = ({
   }, "~"));
 };
 const DiffDisplay = ({
-  diffText
+  diff
 }) => {
   const formatDiff = input => {
     input = input.replace("<diff>", "").replace("</diff>", "");
-    const lines = input.split("\n");
+    let formattedDiff = parseUnixDiff(input);
+    return formattedDiff;
   };
-  return /*#__PURE__*/React.createElement(Box, null);
+  return /*#__PURE__*/React.createElement(Box, {
+    flexDirection: "column",
+    gap: 2
+  }, /*#__PURE__*/React.createElement(Text, {
+    color: "gray"
+  }, diff.issue.location), /*#__PURE__*/React.createElement(Box, {
+    flexDirection: "column"
+  }, formatDiff(diff.diff).split("\n").map((s, i) => /*#__PURE__*/React.createElement(Text, {
+    key: `${diff.issue.uid}-diff-line-${i}`,
+    color: s[0] === "-" ? "red" : "green"
+  }, s))));
+};
+const Header = ({
+  title
+}) => {
+  const ref = useRef(null);
+  const [dims, setDims] = useState();
+  useEffect(() => {
+    if (ref.current) {
+      const _dims = measureElement(ref.current);
+      console.log(_dims);
+      setDims(_dims);
+    }
+  }, [ref.current]);
+  return /*#__PURE__*/React.createElement(Box, {
+    width: "100%",
+    ref: ref
+  }, ref.current && dims && /*#__PURE__*/React.createElement(Text, {
+    backgroundColor: "#626e8c",
+    color: "white",
+    bold: true
+  }, `${title}${" ".repeat(dims.width - title.length)}`));
 };
 const Main = ({
   diffs
@@ -45,6 +77,9 @@ const Main = ({
   const applyOrIgnoreDiff = async (index, status) => {
     let diff = diffArray[index];
     // TODO: revert change if status already set
+    if (diff.status) {
+      return;
+    }
     if (status === "applied") {
       try {
         await processFileWithDiffs(diff.issue.location, diff.diff);
@@ -87,11 +122,6 @@ const Main = ({
         setCurrenDiffIdx(prev => prev + 1);
       }
     }
-
-    // TODO: display diffs in a more human-friendly way
-
-    // TODO: make scan message/spinner more fun
-
     if (input === "a") {
       await applyOrIgnoreDiff(currentDiffIdx, "applied");
     }
@@ -100,29 +130,56 @@ const Main = ({
     }
   });
   return /*#__PURE__*/React.createElement(Box, {
+    flexDirection: "column",
+    height: "100%"
+  }, /*#__PURE__*/React.createElement(Box, {
     flexDirection: "row",
-    height: 30,
+    height: "100%",
     columnGap: 4
   }, /*#__PURE__*/React.createElement(Box, {
     flexDirection: "column",
-    gap: 1
-  }, diffArray.map((diff, i) => /*#__PURE__*/React.createElement(DiffListItem, {
+    rowGap: 1
+  }, /*#__PURE__*/React.createElement(Header, {
+    title: "Issues"
+  }), diffArray.map((diff, i) => /*#__PURE__*/React.createElement(DiffListItem, {
     active: i === currentDiffIdx,
     diff: diff,
     key: `diff-list-item-${i}`
-  })), /*#__PURE__*/React.createElement(Spacer, null), /*#__PURE__*/React.createElement(Box, {
-    flexDirection: "column"
+  }))), /*#__PURE__*/React.createElement(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, /*#__PURE__*/React.createElement(Header, {
+    title: "Apply change to fix"
+  }), /*#__PURE__*/React.createElement(DiffDisplay, {
+    diff: diffArray[currentDiffIdx]
+  }))), /*#__PURE__*/React.createElement(Spacer, null), /*#__PURE__*/React.createElement(Box, {
+    flexDirection: "row",
+    columnGap: 1
   }, /*#__PURE__*/React.createElement(Text, {
     color: "grey"
-  }, "u-arrow, d-arrow to nav"), /*#__PURE__*/React.createElement(Text, {
+  }, /*#__PURE__*/React.createElement(Text, {
+    bold: true,
+    color: "white"
+  }, "\u2191"), ", ", /*#__PURE__*/React.createElement(Text, {
+    bold: true,
+    color: "white"
+  }, "\u2193"), " to nav"), /*#__PURE__*/React.createElement(Text, {
     color: "grey"
-  }, "'a' - accept change"), /*#__PURE__*/React.createElement(Text, {
+  }, "-"), /*#__PURE__*/React.createElement(Text, {
     color: "grey"
-  }, "'i' - ignore change"))), /*#__PURE__*/React.createElement(VerticalDivider, {
-    height: 20
-  }), /*#__PURE__*/React.createElement(Box, null, /*#__PURE__*/React.createElement(Text, null, diffs[currentDiffIdx].diff)));
+  }, /*#__PURE__*/React.createElement(Text, {
+    bold: true,
+    color: "white"
+  }, "a"), " accept change"), /*#__PURE__*/React.createElement(Text, {
+    color: "grey"
+  }, "-"), /*#__PURE__*/React.createElement(Text, {
+    color: "grey"
+  }, /*#__PURE__*/React.createElement(Text, {
+    bold: true,
+    color: "white"
+  }, "i"), " ignore change")));
 };
-const LoadingTextOptions = ["\tHunting vulnerabilities 🤠", "\tHacking the hackers 🦹‍♂️", "\tSniffing out security flaws 🕵️", "\tProbing defenses 🛡️", "\tDebugging the matrix 🕴️", "\tPoking holes in digital armor 🧀", "\tHerding cyber cats 🐱‍💻"];
+const LoadingTextOptions = ["  Hunting vulnerabilities 🤠", "  Hacking the hackers 🦹‍♂️", "  Sniffing out security flaws 🕵️", "  Probing defenses 🛡️", "  Debugging the matrix 🕴️", "  Poking holes in digital armor 🧀", "  Herding cyber cats 🐱‍💻"];
 const randomLoadingTextOption = () => {
   let index = Math.floor(Math.random() * (LoadingTextOptions.length - 1));
   return LoadingTextOptions[index];

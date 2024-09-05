@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { render, Box, Text, Static, useStdin, useInput, Spacer } from "ink";
+import React, { useEffect, useRef, useState } from "react";
+import { render, Box, Text, Static, useStdin, useInput, Spacer, type DOMElement, measureElement } from "ink";
 import { ignoreIssue, processFileWithDiffs, type Diff } from "../commands/apply-patch";
 import { VerticalDivider } from "./divider";
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
+import { parseUnixDiff } from "./parseDiff";
 
 
 const DiffListItem = ({ diff, active }: { diff: Diff, active: boolean }) => {
@@ -29,15 +30,51 @@ const DiffListItem = ({ diff, active }: { diff: Diff, active: boolean }) => {
     )
 }
 
-const DiffDisplay = ({ diffText }: { diffText: string }) => {
+const DiffDisplay = ({ diff }: { diff: Diff }) => {
     const formatDiff = (input: string) => {
         input = input.replace("<diff>", "").replace("</diff>", "");
-        const lines = input.split("\n");
+        let formattedDiff = parseUnixDiff(input);
+        return formattedDiff
     }
     
     return (
-        <Box>
+        <Box flexDirection="column"
+         gap={2}
+        >
+            <Text color={"gray"}>
+                { diff.issue.location }
+            </Text>
+            <Box flexDirection="column">
+                {
+                    formatDiff(diff.diff).split("\n").map((s, i) => (
+                        <Text key={`${diff.issue.uid}-diff-line-${i}`} color={s[0] === "-" ? "red" : "green"}>{ s }</Text>
+                    ))
+                }
+            </Box>
+        </Box>
+    )
+}
 
+const Header = ({ title }: { title: string }) => {
+    const ref = useRef<DOMElement>(null);
+    const [dims, setDims] = useState<{width: number, height: number}>();
+    
+    useEffect(() => {
+        if(ref.current) {
+            const _dims = measureElement(ref.current);
+            console.log(_dims)
+            setDims(_dims);
+        }
+    }, [ref.current]);
+
+    return (
+        <Box width={"100%"} ref={ref}>
+            {
+                (ref.current && dims) &&
+                <Text backgroundColor={"#626e8c"} color={"white"} bold>
+                    { `${title}${" ".repeat(dims.width-title.length)}` }
+                </Text>
+            }
         </Box>
     )
 }
@@ -59,6 +96,9 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
     const applyOrIgnoreDiff = async (index: number, status: Diff['status']) => {
         let diff = diffArray[index];
         // TODO: revert change if status already set
+        if(diff.status) {
+            return
+        }
         if(status === "applied") {
             try {
                 await processFileWithDiffs(diff.issue.location, diff.diff);
@@ -106,10 +146,6 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
             }
         }
 
-        // TODO: display diffs in a more human-friendly way
-
-        // TODO: make scan message/spinner more fun
-
         if(input === "a") {
             await applyOrIgnoreDiff(currentDiffIdx, "applied");
         }
@@ -121,42 +157,54 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
     });
 
     return (
-        <Box
-         flexDirection="row"
-         height={30}
-         columnGap={4}
+        <Box flexDirection="column"
+         height={"100%"}
         >
-            <Box flexDirection="column"
-             gap={1}
+            <Box
+            flexDirection="row"
+            height={"100%"}
+            columnGap={4}
             >
-                {
-                    diffArray.map((diff, i) => (
-                        <DiffListItem
-                         active={i===currentDiffIdx}
-                         diff={diff}
-                         key={`diff-list-item-${i}`}
+                    <Box flexDirection="column"
+                    rowGap={1}
+                    >
+                        <Header title="Issues"/>
+                        {
+                            diffArray.map((diff, i) => (
+                                <DiffListItem
+                                active={i===currentDiffIdx}
+                                diff={diff}
+                                key={`diff-list-item-${i}`}
+                                />
+                            ))
+                        }
+                    </Box>
+
+                    <Box flexDirection="column"
+                     rowGap={1}
+                    >
+                        <Header title="Apply change to fix"/>
+                        <DiffDisplay
+                         diff={diffArray[currentDiffIdx]}
                         />
-                    ))
-                }
-                <Spacer/>
-                <Box flexDirection="column">
-                    <Text color={"grey"}>
-                        u-arrow, d-arrow to nav
-                    </Text>
-                    <Text color={"grey"}>
-                        'a' - accept change
-                    </Text>
-                    <Text color={"grey"}>
-                        'i' - ignore change
-                    </Text>
-                </Box>
+                    </Box>
             </Box>
-            <VerticalDivider height={20}/>
-            <Box>
-                <Text>
-                    {
-                        diffs[currentDiffIdx].diff
-                    }
+            <Spacer/>
+            <Box flexDirection="row" columnGap={1}>
+                <Text color={"grey"}>
+                <Text bold color={"white"}>↑</Text>, <Text bold color={"white"}>↓</Text> to nav
+                </Text>
+                <Text color={"grey"}>
+                    -
+                </Text>
+                <Text color={"grey"}>
+                    <Text bold color={"white"}>a</Text> accept change
+                </Text>
+                <Text color={"grey"}>
+                    -
+                </Text>
+                <Text color={"grey"}>
+                    <Text bold color={"white"}>i</Text> ignore change
                 </Text>
             </Box>
         </Box>
@@ -164,13 +212,13 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
 }
 
 const LoadingTextOptions: string[] = [
-    "\tHunting vulnerabilities 🤠",
-    "\tHacking the hackers 🦹‍♂️",
-    "\tSniffing out security flaws 🕵️",
-    "\tProbing defenses 🛡️",
-    "\tDebugging the matrix 🕴️",
-    "\tPoking holes in digital armor 🧀",
-    "\tHerding cyber cats 🐱‍💻"
+    "  Hunting vulnerabilities 🤠",
+    "  Hacking the hackers 🦹‍♂️",
+    "  Sniffing out security flaws 🕵️",
+    "  Probing defenses 🛡️",
+    "  Debugging the matrix 🕴️",
+    "  Poking holes in digital armor 🧀",
+    "  Herding cyber cats 🐱‍💻"
 ];
 
 const randomLoadingTextOption = () => {
