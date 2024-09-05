@@ -2,6 +2,7 @@ import { getEncoding } from "js-tiktoken";
 import OpenAI from "openai";
 import { OAI_EXPLANATION_SYSTEM_MESSAGE, OAI_EXPLANATION_USER_MESSAGE, OAI_EXTRACT_SNIPPET_SYSTEM_MESSAGE, OAI_EXTRACT_SNIPPET_USER_MESSAGE, OAI_PR_SUMMARY_SYSTEM_MESSAGE, OAI_PR_SUMMARY_USER_MESSAGE, OAI_SYSTEM_MESSAGE, OAI_USER_MESSAGE } from "./prompts";
 import type { Issue } from "@pensar/semgrep-node";
+import { config } from "@/lib/config";
 
 interface ErrorFixExplanationParams {
     fileContent: string;
@@ -27,19 +28,19 @@ interface CodeEditParams {
 };
 
 export interface CompletionClientOptions {
-    oaiApiKey?: string;
+    pensarApiKey?: string;
     local?: boolean;
 };
 
 const getCompletionClient = (options: CompletionClientOptions) => {
-    let baseUrl = options.local ? "http://localhost:8080/v1/" : undefined;
-    let oaiApiKey = options.oaiApiKey??process.env.OPENAI_API_KEY;
-    if(!options.local && !oaiApiKey) {
-        throw new Error("OpenAI API key required if not using `--local` option. Pass OpenAI API key as either the `OPENAI_API_KEY` env variable or to `--api_key` option.");
+    let baseUrl = options.local ? "http://localhost:8080/v1/" : `${config.API_URL}/oai/v1`;
+    let pensarApiKey = options.pensarApiKey??process.env.PENSAR_API_KEY;
+    if(!options.local && !pensarApiKey) {
+        throw new Error("Pensar API key required if not using `--local` option. Pass Pensar API key as either the `PENSAR_API_KEY` env variable or to `--api_key` option.");
     }
     const client = new OpenAI({
         baseURL: baseUrl,
-        apiKey: options.local ? "sk-no-key-required" : oaiApiKey
+        apiKey: options.local ? "sk-no-key-required" : pensarApiKey
     });
     return client
 }
