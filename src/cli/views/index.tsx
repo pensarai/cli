@@ -3,6 +3,7 @@ import { render, Box, Text, Static, useStdin, useInput, Spacer } from "ink";
 import { ignoreIssue, processFileWithDiffs, type Diff } from "../commands/apply-patch";
 import { VerticalDivider } from "./divider";
 import Spinner from "ink-spinner";
+import { withFullScreen } from "./fullscreen/withFullScreen";
 
 
 const DiffListItem = ({ diff, active }: { diff: Diff, active: boolean }) => {
@@ -24,6 +25,19 @@ const DiffListItem = ({ diff, active }: { diff: Diff, active: boolean }) => {
                 diff.status === "ignored" &&
                 <Text color={"yellow"}>~</Text>
             }
+        </Box>
+    )
+}
+
+const DiffDisplay = ({ diffText }: { diffText: string }) => {
+    const formatDiff = (input: string) => {
+        input = input.replace("<diff>", "").replace("</diff>", "");
+        const lines = input.split("\n");
+    }
+    
+    return (
+        <Box>
+
         </Box>
     )
 }
@@ -150,13 +164,13 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
 }
 
 const LoadingTextOptions: string[] = [
-    "Hunting vulnerabilities 🤠",
-    "Hacking the hackers 🦹‍♂️",
-    "Sniffing out security flaws 🕵️",
-    "Probing defenses 🛡️",
-    "Debugging the matrix 🕴️",
-    "Poking holes in digital armor 🧀",
-    "Herding cyber cats 🐱‍💻"
+    "\tHunting vulnerabilities 🤠",
+    "\tHacking the hackers 🦹‍♂️",
+    "\tSniffing out security flaws 🕵️",
+    "\tProbing defenses 🛡️",
+    "\tDebugging the matrix 🕴️",
+    "\tPoking holes in digital armor 🧀",
+    "\tHerding cyber cats 🐱‍💻"
 ];
 
 const randomLoadingTextOption = () => {
@@ -169,10 +183,14 @@ const ScanLoaderView = () => {
     const [loadingText, setLoadingText] = useState<string>(randomLoadingTextOption());
 
     useEffect(() => {
-        setInterval(() => {
+        let interval = setInterval(() => {
             setLoadingText(randomLoadingTextOption());
         }, 10000);
-    });
+
+        return () => {
+            clearInterval(interval);
+        }
+    }, []);
 
     return (
         <Text>
@@ -185,15 +203,14 @@ const ScanLoaderView = () => {
 }
 
 export function renderScanLoader() {
-    const {clear} = render(<ScanLoaderView/>);
-    return clear
+    const {unmount} = render(<ScanLoaderView/>, {
+        exitOnCtrlC: true
+    });
+
+    return { unmount }
 }
 
 export async function renderMainView(diffs: Diff[]) {
-    console.clear();
-    await render(<Main
-     diffs={diffs}
-    />).waitUntilExit();
-    console.clear();
+    withFullScreen(<Main diffs={diffs}/>).start();
 }
 

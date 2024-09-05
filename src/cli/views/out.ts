@@ -3,6 +3,7 @@ import { render, Box, Text, useStdin, useInput, Spacer } from "ink";
 import { ignoreIssue, processFileWithDiffs } from "../commands/apply-patch";
 import { VerticalDivider } from "./divider";
 import Spinner from "ink-spinner";
+import { withFullScreen } from "./fullscreen/withFullScreen";
 const DiffListItem = ({
   diff,
   active
@@ -17,6 +18,15 @@ const DiffListItem = ({
   }, "\u2713"), diff.status === "ignored" && /*#__PURE__*/React.createElement(Text, {
     color: "yellow"
   }, "~"));
+};
+const DiffDisplay = ({
+  diffText
+}) => {
+  const formatDiff = input => {
+    input = input.replace("<diff>", "").replace("</diff>", "");
+    const lines = input.split("\n");
+  };
+  return /*#__PURE__*/React.createElement(Box, null);
 };
 const Main = ({
   diffs
@@ -112,7 +122,7 @@ const Main = ({
     height: 20
   }), /*#__PURE__*/React.createElement(Box, null, /*#__PURE__*/React.createElement(Text, null, diffs[currentDiffIdx].diff)));
 };
-const LoadingTextOptions = ["Hunting vulnerabilities 🤠", "Hacking the hackers 🦹‍♂️", "Sniffing out security flaws 🕵️", "Probing defenses 🛡️", "Debugging the matrix 🕴️", "Poking holes in digital armor 🧀", "Herding cyber cats 🐱‍💻"];
+const LoadingTextOptions = ["\tHunting vulnerabilities 🤠", "\tHacking the hackers 🦹‍♂️", "\tSniffing out security flaws 🕵️", "\tProbing defenses 🛡️", "\tDebugging the matrix 🕴️", "\tPoking holes in digital armor 🧀", "\tHerding cyber cats 🐱‍💻"];
 const randomLoadingTextOption = () => {
   let index = Math.floor(Math.random() * (LoadingTextOptions.length - 1));
   return LoadingTextOptions[index];
@@ -120,24 +130,29 @@ const randomLoadingTextOption = () => {
 const ScanLoaderView = () => {
   const [loadingText, setLoadingText] = useState(randomLoadingTextOption());
   useEffect(() => {
-    setInterval(() => {
+    let interval = setInterval(() => {
       setLoadingText(randomLoadingTextOption());
     }, 10000);
-  });
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
   return /*#__PURE__*/React.createElement(Text, null, /*#__PURE__*/React.createElement(Text, null, /*#__PURE__*/React.createElement(Spinner, {
     type: "dots"
   })), loadingText);
 };
 export function renderScanLoader() {
   const {
-    clear
-  } = render(/*#__PURE__*/React.createElement(ScanLoaderView, null));
-  return clear;
+    unmount
+  } = render(/*#__PURE__*/React.createElement(ScanLoaderView, null), {
+    exitOnCtrlC: true
+  });
+  return {
+    unmount
+  };
 }
 export async function renderMainView(diffs) {
-  console.clear();
-  await render(/*#__PURE__*/React.createElement(Main, {
+  withFullScreen(/*#__PURE__*/React.createElement(Main, {
     diffs: diffs
-  })).waitUntilExit();
-  console.clear();
+  })).start();
 }

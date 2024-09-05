@@ -28,6 +28,5 @@
     },
     "outDir": "dist",
     "rootDir": "src",
-  },
-  "exclude": ["./src/cli/views/out.ts"]
+  }
 }
