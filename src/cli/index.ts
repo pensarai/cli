@@ -12,6 +12,7 @@ export async function initCli() {
     .option("-lang, --language <language>", "Target a specific language/filetype")
     .option("--local", "Run local LLM inference")
     .option("--api-key <api_key>", "Specify Pensar key. This will default to `proccess.env.PENSAR_API_KEY`")
+    .option("--api-key-name <api_key_name>", "Specify the name of the API key you wish to use.")
     .option("--github", "Specify if the CLI is being run in a github action. This will use generated fixes to create PRs instead of presenting the user the ability to locally apply patches.")
     .option("--rulesets <rulesets...>", "Specify rulesets to scan against. Run `pensar list-rules` to view a full list of rulesets.")
     .option("--verbose", "Verbosity flag")
@@ -25,6 +26,7 @@ export async function initCli() {
             local: options.local,
             ruleSets: options.rulesets,
             api_key: options.apiKey,
+            api_key_name: options.apiKeyName,
             verbose: options.verbose,
             no_logging: options.noLogging,
             no_tel: options.noTel

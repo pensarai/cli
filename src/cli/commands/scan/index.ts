@@ -9,6 +9,7 @@ import { nanoid } from "nanoid";
 import { logScanResultsToConsole, updateIssueCloseStatus } from "../../logging";
 import { renderScanLoader } from "../../views/out";
 import { detectProgrammingLanguages } from "./utils";
+import { readFromConfigFile } from "../set-token";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default (Update: it does not - atleast seems not to)
 
@@ -92,6 +93,7 @@ export interface ScanCommandParams {
     ruleSets?: string[];
     local?: boolean;
     api_key?: string;
+    api_key_name?: string;
     no_logging: boolean;
     no_tel: boolean;
 }
@@ -106,7 +108,11 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         await checkLocalConfig();
     }
 
-    let apiKey = params.api_key ?? process.env.PENSAR_API_KEY;
+    let apiKey: string | undefined = params.api_key ?? process.env.PENSAR_API_KEY;
+
+    if(!apiKey) {
+        apiKey = readFromConfigFile(params.api_key_name)??undefined;
+    }
 
     if(!apiKey && !params.no_logging) {
         throw new Error("API key is required when logging metrics to the Pensar console. Pass in `--no-logging` if you do not wish to log scan results to the Pensar console.");
