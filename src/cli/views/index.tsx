@@ -4,7 +4,7 @@ import { ignoreIssue, processFileWithDiffs, type Diff } from "../commands/scan/a
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
 import { parseUnixDiff } from "./parseDiff";
-import { updateIssueCloseStatus } from "../metrics";
+import { updateIssueCloseStatus } from "../logging";
 import type { MainViewProps } from "@/lib/types";
 
 
@@ -100,9 +100,9 @@ type DiffActionToApply = {
     action: "apply" | "ignore";
 };
 
-const Main = ({ diffs, scanId, noMetrics, apiKey }: MainViewProps) => {
+const Main = ({ diffs, scanId, noLogging, apiKey }: MainViewProps) => {
     
-    if(!noMetrics && !apiKey) {
+    if(!noLogging && !apiKey) {
         throw new Error("Pensar API key required if metrics logging is not disabled");
     }
     
@@ -167,7 +167,7 @@ const Main = ({ diffs, scanId, noMetrics, apiKey }: MainViewProps) => {
         setDiffArray(newDiffArray);
 
         await applyOrIgnoreDiff({diff, action: status==="applied" ? "apply": "ignore"});
-        if(!noMetrics) {
+        if(!noLogging) {
             try {
                 await updateIssueCloseStatus(
                     scanId, diff.issue.uid, {
@@ -325,7 +325,7 @@ export async function renderMainView(props: MainViewProps) {
     withFullScreen(<Main 
         diffs={props.diffs} 
         scanId={props.scanId} 
-        noMetrics={props.noMetrics} 
+        noLogging={props.noLogging} 
         apiKey={props.apiKey} 
     />).start();
 }

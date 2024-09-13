@@ -4,7 +4,7 @@ import { ignoreIssue, processFileWithDiffs } from "../commands/scan/apply-patch"
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
 import { parseUnixDiff } from "./parseDiff";
-import { updateIssueCloseStatus } from "../metrics";
+import { updateIssueCloseStatus } from "../logging";
 const DiffListItem = ({
   diff,
   active,
@@ -72,10 +72,10 @@ const Header = ({
 const Main = ({
   diffs,
   scanId,
-  noMetrics,
+  noLogging,
   apiKey
 }) => {
-  if (!noMetrics && !apiKey) {
+  if (!noLogging && !apiKey) {
     throw new Error("Pensar API key required if metrics logging is not disabled");
   }
   const {
@@ -138,7 +138,7 @@ const Main = ({
       diff,
       action: status === "applied" ? "apply" : "ignore"
     });
-    if (!noMetrics) {
+    if (!noLogging) {
       try {
         await updateIssueCloseStatus(scanId, diff.issue.uid, {
           closeMethod: status === "applied" ? "manual" : "ignore",
@@ -258,7 +258,7 @@ export async function renderMainView(props) {
   withFullScreen(/*#__PURE__*/React.createElement(Main, {
     diffs: props.diffs,
     scanId: props.scanId,
-    noMetrics: props.noMetrics,
+    noLogging: props.noLogging,
     apiKey: props.apiKey
   })).start();
 }

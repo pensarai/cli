@@ -6,9 +6,8 @@ import { spawnLlamaCppServer } from "../../../server";
 import { checkLocalConfig, getFileContents } from "../../utils";
 import { displayDiffs } from "./apply-patch";
 import { nanoid } from "nanoid";
-import { logScanResultsToConsole, updateIssueCloseStatus } from "../../metrics";
+import { logScanResultsToConsole, updateIssueCloseStatus } from "../../logging";
 import { renderScanLoader } from "../../views/out";
-import { config } from "@/lib/config";
 import { detectProgrammingLanguages } from "./utils";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default (Update: it does not - atleast seems not to)
