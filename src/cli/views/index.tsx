@@ -4,7 +4,7 @@ import { ignoreIssue, processFileWithDiffs, type Diff } from "../commands/scan/a
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
 import { parseUnixDiff } from "./parseDiff";
-import { updateIssueCloseStatus } from "../logging";
+import { updateIssueCloseStatus } from "../remote-logging";
 import type { MainViewProps } from "@/lib/types";
 
 

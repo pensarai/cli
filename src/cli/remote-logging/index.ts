@@ -1,4 +1,5 @@
 import { config } from "@/lib/config";
+import { writeToLog } from "@/lib/logs";
 import type { IssueItem, Repository } from "@/lib/types";
 
 type ScanItem = {
@@ -42,8 +43,9 @@ export async function logScanResultsToConsole(scanId: string, issues: IssueItem[
 
     if(resp.status !== 201) {
         console.error(`There was an error uploading scan results: ${resp.status}`);
-        // TODO: write to pensar log file instead --> both error and success
+        writeToLog(`There was an error uploading scan results: ${resp.status}`);
     }
+    writeToLog(`Scan successfully logged to console.penar.dev. scan-id=${scanId}`);
 }
 
 export async function updateIssueCloseStatus(scanId: string, issueUid: string, options: UpdateIssueOptions) {
@@ -57,7 +59,8 @@ export async function updateIssueCloseStatus(scanId: string, issueUid: string, o
     });
 
     if(resp.status !== 201) {
-        console.error("There was an error updating issue close status: ", resp.status);
-        // TODO: write to pensar log file instead --> both error and success
+        console.error(`There was an error updating issue close status: ${resp.status}`);
+        writeToLog(`There was an error updating issue close status: ${resp.status}`);
     }
+    writeToLog(`Successfully updated issue close status. scan-id=${scanId} issue-id=${issueUid}`);
 }
