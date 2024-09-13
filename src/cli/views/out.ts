@@ -4,7 +4,7 @@ import { ignoreIssue, processFileWithDiffs } from "../commands/scan/apply-patch"
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
 import { parseUnixDiff } from "./parseDiff";
-import { updateIssueCloseStatus } from "../logging";
+import { updateIssueCloseStatus } from "../remote-logging";
 const DiffListItem = ({
   diff,
   active,

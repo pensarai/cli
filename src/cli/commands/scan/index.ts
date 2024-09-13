@@ -6,12 +6,13 @@ import { spawnLlamaCppServer } from "../../../server";
 import { checkLocalConfig, getFileContents } from "../../utils";
 import { displayDiffs } from "./apply-patch";
 import { nanoid } from "nanoid";
-import { logScanResultsToConsole, updateIssueCloseStatus } from "../../logging";
+import { logScanResultsToConsole, updateIssueCloseStatus } from "../../remote-logging";
 import { renderScanLoader } from "../../views/out";
 import { detectProgrammingLanguages } from "./utils";
 import { readFromConfigFile } from "../set-token";
+import { writeToLog } from "@/lib/logs";
 
-// TODO: respect .gitignore --> semgrep-core may do this by default (Update: it does not - atleast seems not to)
+// TODO: respect .gitignore when scanning
 
 type ScanOptions = Omit<SemgrepScanOptions, "language"> & {
     language?: Language;
@@ -99,9 +100,7 @@ export interface ScanCommandParams {
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
-    // TODO: respect .gitignore when scanning --> @pensar/semgrep
-    // TODO: implement // @pensar-ok tag support
-
+    
     const startTime = Date.now();
 
     if(params.local) {
@@ -145,7 +144,6 @@ export async function scanCommandHandler(params: ScanCommandParams) {
                 repository: { name: repo.name, owner: repo.owner }, startTime, endTime, apiKey: apiKey as string
             });
         } catch (error) {
-            // TODO: write to logs
             console.error(`Error logging scan to Pensar console: `, error);
         }
     }

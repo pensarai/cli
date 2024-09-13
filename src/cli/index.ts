@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { scanCommandHandler, type ScanCommandParams } from "./commands/scan";
 import { loginCommandHandler } from "./commands/login";
 import { setTokenCommandHandler } from "./commands/set-token";
+import { listRulesetsCommandHandler } from "./commands/list-rulesets";
 
 export async function initCli() {
 
@@ -49,6 +50,12 @@ export async function initCli() {
             name: options.name
         })
     });
+
+    program.command("list-rulesets")
+    .description("List available rulesets. ")
+    .action(() => {
+        listRulesetsCommandHandler();
+    })
 
 
 
