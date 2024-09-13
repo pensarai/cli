@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { scanCommandHandler, type ScanCommandParams } from "./commands/scan";
+import { loginCommandHandler } from "./commands/login";
 
 export async function initCli() {
 
@@ -29,6 +30,14 @@ export async function initCli() {
         };
         await scanCommandHandler(params);
     });
+
+    program.command("login")
+    .description("Opens a browser window at https://console.pensar.dev/login.")
+    .action(() => {
+        loginCommandHandler();
+    });
+
+    
 
     // TODO: implement model weight and inference server binary downloading for use w/ `--local`
     // program.command("init-local")
