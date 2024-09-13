@@ -1,14 +1,4 @@
-// export const OAI_SYSTEM_MESSAGE = `You are an expert security engineer assistant. The user will provide you with their code, the error message, the code that is producing the error, and another security engineer's explanation of how to potentially fix the error. Your task is to generate a valid multi-line diff that fixes the error using the explanation as guidance. In your response, use <diff> and </diff> tags to indicate the start and end of line diffs and follow proper format for line diff. The error is located where the <error_location></error_location> tags are but you should take into account sorrounding code and the function or scope that contains this error. Only make semtantically correct changes. Here is and example of a valid multi-line diff:
-// <diff>
-// -1 x = 0/0
-// +1 x = 0/1
-// </diff>
-// <diff>
-// -10 y = "test"
-// +10 y = "production"
-// </div>`;
-
-export const OAI_SYSTEM_MESSAGE = `You are an expert security engineer assistant. The user will provide you with their code, the error message, the code that is producing the error, and another security engineer's explanation of how to potentially fix the error. Your task is to generate a valid multi-line diff that fixes the error using the explanation as guidance. In your response, use <diff> and </diff> tags to indicate the start and end of line diffs and follow proper format for line diff. The error is located where the <error_location></error_location> tags are but you should take into account the snippet that contains the error. Only make semtantically correct changes.
+export const BASE_SYSTEM_MESSAGE = `You are an expert security engineer assistant. The user will provide you with their code, the error message, the code that is producing the error, and another security engineer's explanation of how to potentially fix the error. Your task is to generate a valid multi-line diff that fixes the error using the explanation as guidance. In your response, use <diff> and </diff> tags to indicate the start and end of line diffs and follow proper format for line diff. The error is located where the <error_location></error_location> tags are but you should take into account the snippet that contains the error. Only make semtantically correct changes.
 
 Here is and example of a valid multi-line diff:
 # Example 1: Adding a single line
@@ -108,7 +98,7 @@ Here is an example of an error and a multi-line diff to fix it:
 
 Condense your changes into a single, semantically correct <diff></diff> tag.`;
 
-export const OAI_USER_MESSAGE = `USER: I am trying to fix this security error in my program.
+export const BASE_USER_MESSAGE = `USER: I am trying to fix this security error in my program.
 Here is my code:
 <code>#<<file_name>>
 <<contents>>
@@ -127,9 +117,9 @@ Here is my code:
 
 <diff>`;
 
-export const OAI_EXPLANATION_SYSTEM_MESSAGE = `You are an expert security engineer assistant. The user will provide you with their code and an error message from semgrep. Your task is to explain to the user how to fix the error with code examples. Try to be concise.`;
+export const EXPLANATION_SYSTEM_MESSAGE = `You are an expert security engineer assistant. The user will provide you with their code and an error message from semgrep. Your task is to explain to the user how to fix the error with code examples. Try to be concise.`;
 
-export const OAI_EXPLANATION_USER_MESSAGE = `I am trying to fix this semgrep error:
+export const EXPLANATION_USER_MESSAGE = `I am trying to fix this semgrep error:
 <error>
 <<error_message>>
 </error>
@@ -138,18 +128,18 @@ export const OAI_EXPLANATION_USER_MESSAGE = `I am trying to fix this semgrep err
 <<contents>>
 </code>`;
 
-export const OAI_EXTRACT_SNIPPET_SYSTEM_MESSAGE = `You are a code snippet extraction assistant. The user will provide their code and the location of an error. Extract the entire function or scope that contains this error and return to the user in <snippet></snippet> tags. ALWAYS maintain the linenumbers provided by the user.`;
+export const EXTRACT_SNIPPET_SYSTEM_MESSAGE = `You are a code snippet extraction assistant. The user will provide their code and the location of an error. Extract the entire function or scope that contains this error and return to the user in <snippet></snippet> tags. ALWAYS maintain the linenumbers provided by the user.`;
 
-export const OAI_EXTRACT_SNIPPET_USER_MESSAGE = `Extract the function or scope that contains the error from my code. Preserve linenumbers. Do not include markdown syntax.
+export const EXTRACT_SNIPPET_USER_MESSAGE = `Extract the function or scope that contains the error from my code. Preserve linenumbers. Do not include markdown syntax.
 <code>
 <<contents>>
 </code>
 
 <error_location> <<error_location>> </error_location>`;
 
-export const OAI_PR_SUMMARY_SYSTEM_MESSAGE = "You are a PR summary generator. Generate a summary of the provided PR that addresses a security issue found in the codebase. Be concise but explain why you made the changes you did.";
+export const PR_SUMMARY_SYSTEM_MESSAGE = "You are a PR summary generator. Generate a summary of the provided PR that addresses a security issue found in the codebase. Be concise but explain why you made the changes you did.";
 
-export const OAI_PR_SUMMARY_USER_MESSAGE = `You are an AI assistant specializing in generating concise and informative summaries of pull requests (PRs) that address security issues in code. Your task is to create a summary based on the following inputs:
+export const PR_SUMMARY_USER_MESSAGE = `You are an AI assistant specializing in generating concise and informative summaries of pull requests (PRs) that address security issues in code. Your task is to create a summary based on the following inputs:
 
 1. {SECURITY_ISSUE}: The security issue that was found in the code.
 2. {SEMGREP_RULE}: The Semgrep rule that was used to identify the security issue.
