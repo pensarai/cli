@@ -10,14 +10,14 @@ type ScanItem = {
     timeEnded: number;
 }
 
-interface LogScanResultOptions {
+export interface LogScanResultOptions {
     repository: Repository;
     startTime: number;
     endTime: number;
     apiKey: string;
 };
 
-interface UpdateIssueOptions {
+export interface UpdateIssueOptions {
     pullRequest?: string;
     closeMethod?: "manual" | "ignore" | "github-action";
     apiKey: string;
@@ -41,7 +41,7 @@ export async function logScanResultsToConsole(scanId: string, issues: IssueItem[
     });
 
     if(resp.status !== 201) {
-        console.error("There was an error uploading scan results: ", resp.status);
+        console.error(`There was an error uploading scan results: ${resp.status}`);
         // TODO: write to pensar log file instead --> both error and success
     }
 }

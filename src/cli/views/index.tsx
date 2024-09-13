@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { render, Box, Text, Static, useStdin, useInput, Spacer, type DOMElement, measureElement } from "ink";
-import { ignoreIssue, processFileWithDiffs, type Diff } from "../commands/apply-patch";
-import { VerticalDivider } from "./divider";
+import { ignoreIssue, processFileWithDiffs, type Diff } from "../commands/scan/apply-patch";
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
 import { parseUnixDiff } from "./parseDiff";
+import { updateIssueCloseStatus } from "../metrics";
+import type { MainViewProps } from "@/lib/types";
 
 
-const DiffListItem = ({ diff, active }: { diff: Diff, active: boolean }) => {
+const DiffListItem = ({ diff, active, loading }: { diff: Diff, active: boolean, loading: boolean }) => {
     return (
         <Box flexDirection="row">
             <Text
@@ -26,11 +27,20 @@ const DiffListItem = ({ diff, active }: { diff: Diff, active: boolean }) => {
                 diff.status === "ignored" &&
                 <Text color={"yellow"}>~</Text>
             }
+            {
+                loading &&
+                <Text color={"blue"}>
+                    <Spinner type="dots"/>
+                </Text>
+            }
         </Box>
     )
 }
 
 const DiffDisplay = ({ diff }: { diff: Diff }) => {
+
+    const ref = useRef<DOMElement>(null);
+
     const formatDiff = (input: string) => {
         input = input.replace("<diff>", "").replace("</diff>", "");
         let formattedDiff = parseUnixDiff(input);
@@ -40,6 +50,7 @@ const DiffDisplay = ({ diff }: { diff: Diff }) => {
     return (
         <Box flexDirection="column"
          gap={2}
+         ref={ref}
         >
             <Text color={"gray"}>
                 { diff.issue.location }
@@ -50,6 +61,11 @@ const DiffDisplay = ({ diff }: { diff: Diff }) => {
                         <Text key={`${diff.issue.uid}-diff-line-${i}`} color={s[0] === "-" ? "red" : "green"}>{ s }</Text>
                     ))
                 }
+            </Box>
+            <Box flexShrink={1}>
+                <Text>
+                    { diff.issue.message }
+                </Text>
             </Box>
         </Box>
     )
@@ -62,28 +78,40 @@ const Header = ({ title }: { title: string }) => {
     useEffect(() => {
         if(ref.current) {
             const _dims = measureElement(ref.current);
-            console.log(_dims)
             setDims(_dims);
         }
     }, [ref.current]);
 
     return (
-        <Box width={"100%"} ref={ref}>
+        <Box width={"100%"} borderStyle={"round"} ref={ref}>
             {
                 (ref.current && dims) &&
-                <Text backgroundColor={"#626e8c"} color={"white"} bold>
-                    { `${title}${" ".repeat(dims.width-title.length)}` }
+                <Text color={"white"} bold>
+                    {/* { `${title}${" ".repeat(dims.width-title.length)}` } */}
+                    { title }
                 </Text>
             }
         </Box>
     )
 }
 
-const Main = ({ diffs }: { diffs: Diff[] }) => {
+type DiffActionToApply = {
+    diff: Diff;
+    action: "apply" | "ignore";
+};
+
+const Main = ({ diffs, scanId, noMetrics, apiKey }: MainViewProps) => {
+    
+    if(!noMetrics && !apiKey) {
+        throw new Error("Pensar API key required if metrics logging is not disabled");
+    }
+    
     const {setRawMode} = useStdin();
 
     const [currentDiffIdx, setCurrenDiffIdx] = useState(0);
     const [diffArray, setDiffArray] = useState<Diff[]>(diffs);
+    const [loading, setLoading] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setRawMode(true);
@@ -91,33 +119,39 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
         return () => {
             setRawMode(false);
         }
-    });
+    }, []);
 
-    const applyOrIgnoreDiff = async (index: number, status: Diff['status']) => {
-        let diff = diffArray[index];
-        // TODO: revert change if status already set
-        if(diff.status) {
-            return
-        }
-        if(status === "applied") {
+    const showError = (e: string) => {
+        setError(e);
+        setTimeout(() => {
+            setError(null);
+        }, 1000);
+    }
+
+    const applyOrIgnoreDiff = async (diffAction: DiffActionToApply) => {
+        let { diff, action } = diffAction;
+        if(action === "apply") {
             try {
                 await processFileWithDiffs(diff.issue.location, diff.diff);
-                updateDiffStatus(index, status);
             } catch(error) {
-                // TODO: display error to user
+                // TODO: display error to user & log 
+                // setError(String(error));
+                showError(String(error));
+                
             }
         }
-        if(status === "ignored") {
+        if(action === "ignore") {
             try {
                 await ignoreIssue(diff.issue);
-                updateDiffStatus(index, status);
             } catch(error) {
-                // TODO: display error to user or kill process and log error gracefully
+                // TODO: display error to user or and log error gracefully
+                showError(String(error));
             }
         }
     }
 
     const updateDiffStatus = async (index: number, status: Diff['status']) => {
+        setLoading(index);
         let diff = diffArray[index];
         diff = {
             ...diff,
@@ -131,27 +165,45 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
         });
 
         setDiffArray(newDiffArray);
+
+        await applyOrIgnoreDiff({diff, action: status==="applied" ? "apply": "ignore"});
+        if(!noMetrics) {
+            try {
+                await updateIssueCloseStatus(
+                    scanId, diff.issue.uid, {
+                        closeMethod: status === "applied" ? "manual" : "ignore",
+                        apiKey: apiKey as string
+                    }
+                );
+            } catch(error) {
+                // TODO: log error
+                showError(String(error));
+            }
+        }
+        setLoading(null);
     }
 
     useInput( async (input, key) => {
         if(key.upArrow) {
-            if(currentDiffIdx !== 0) {
+            if(currentDiffIdx > 0) {
                 setCurrenDiffIdx((prev) => prev-1);
             }
         }
         
         if(key.downArrow) {
-            if(currentDiffIdx < diffs.length-1) {
+            if(currentDiffIdx < diffArray.length-1) {
                 setCurrenDiffIdx((prev) => prev+1);
             }
+
         }
 
         if(input === "a") {
-            await applyOrIgnoreDiff(currentDiffIdx, "applied");
+            updateDiffStatus(currentDiffIdx, "applied");
+
         }
 
         if(input === "i") {
-            await applyOrIgnoreDiff(currentDiffIdx, "ignored");
+            updateDiffStatus(currentDiffIdx, "ignored");
         }
         
     });
@@ -172,9 +224,10 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
                         {
                             diffArray.map((diff, i) => (
                                 <DiffListItem
-                                active={i===currentDiffIdx}
-                                diff={diff}
-                                key={`diff-list-item-${i}`}
+                                 loading={loading===i}
+                                 active={i===currentDiffIdx}
+                                 diff={diff}
+                                 key={`diff-list-item-${i}`}
                                 />
                             ))
                         }
@@ -190,30 +243,40 @@ const Main = ({ diffs }: { diffs: Diff[] }) => {
                     </Box>
             </Box>
             <Spacer/>
-            <Box flexDirection="row" columnGap={1}>
-                <Text color={"grey"}>
-                <Text bold color={"white"}>↑</Text>, <Text bold color={"white"}>↓</Text> to nav
-                </Text>
-                <Text color={"grey"}>
-                    -
-                </Text>
-                <Text color={"grey"}>
-                    <Text bold color={"white"}>a</Text> accept change
-                </Text>
-                <Text color={"grey"}>
-                    -
-                </Text>
-                <Text color={"grey"}>
-                    <Text bold color={"white"}>i</Text> ignore change
-                </Text>
-            </Box>
+            {
+                error &&
+                <Box flexDirection="row">
+                    <Text backgroundColor={"red"} color={"white"}>
+                        { error }
+                    </Text>
+                </Box>
+            }
+            {
+                !error &&
+                <Box flexDirection="row" columnGap={1}>
+                    <Text color={"grey"}>
+                    <Text bold color={"white"}>↑</Text>, <Text bold color={"white"}>↓</Text> to nav
+                    </Text>
+                    <Text color={"grey"}>
+                        -
+                    </Text>
+                    <Text color={"grey"}>
+                        <Text bold color={"white"}>a</Text> accept change
+                    </Text>
+                    <Text color={"grey"}>
+                        -
+                    </Text>
+                    <Text color={"grey"}>
+                        <Text bold color={"white"}>i</Text> ignore change
+                    </Text>
+                </Box>
+            }
         </Box>
     )
 }
 
 const LoadingTextOptions: string[] = [
     "  Hunting vulnerabilities 🤠",
-    "  Hacking the hackers 🦹‍♂️",
     "  Sniffing out security flaws 🕵️",
     "  Probing defenses 🛡️",
     "  Debugging the matrix 🕴️",
@@ -258,7 +321,12 @@ export function renderScanLoader() {
     return { unmount }
 }
 
-export async function renderMainView(diffs: Diff[]) {
-    withFullScreen(<Main diffs={diffs}/>).start();
+export async function renderMainView(props: MainViewProps) {
+    withFullScreen(<Main 
+        diffs={props.diffs} 
+        scanId={props.scanId} 
+        noMetrics={props.noMetrics} 
+        apiKey={props.apiKey} 
+    />).start();
 }
 

@@ -94,7 +94,7 @@ async function getCompletion(systemMessage: string, userMessage: string, clientO
         {
             // model: "/home/ubuntu/pensar-local/src/server/models/DeepSeek-Coder-V2-Lite-Instruct-Q6_K.gguf",
             // model: "/home/ubuntu/pensar-local/src/server/models/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf",
-            model: "gpt-4o-mini",
+            model: "main",
             messages: [
                 { role: "system", content: systemMessage },
                 { role: "user", content: userMessage }

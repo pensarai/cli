@@ -1,18 +1,42 @@
-import scan, { type Language, type SemgrepScanOptions } from "@pensar/semgrep-node";
-import { codeGenDiff, type CompletionClientOptions } from "../completions";
-import { createPr } from "./github";
-import type { IssueItem, Repository } from "../../lib/types";
-import { spawnLlamaCppServer } from "../../server";
-import { checkLocalConfig, getFileContents } from "../utils";
+import scan, { type Language, type SemgrepScanOptions, type Issue } from "@pensar/semgrep-node";
+import { codeGenDiff, type CompletionClientOptions } from "../../completions";
+import { createPr, getGitRemoteOrigin } from "./github";
+import type { IssueItem, Repository } from "../../../lib/types";
+import { spawnLlamaCppServer } from "../../../server";
+import { checkLocalConfig, getFileContents } from "../../utils";
 import { displayDiffs } from "./apply-patch";
 import { nanoid } from "nanoid";
-import { logScanResultsToConsole, updateIssueCloseStatus } from "../metrics";
-import { renderScanLoader } from "../views/out";
+import { logScanResultsToConsole, updateIssueCloseStatus } from "../../metrics";
+import { renderScanLoader } from "../../views/out";
+import { config } from "@/lib/config";
+import { detectProgrammingLanguages } from "./utils";
 
 // TODO: respect .gitignore --> semgrep-core may do this by default (Update: it does not - atleast seems not to)
 
-async function runScan(target: string, options: SemgrepScanOptions) {
-    const results = await scan(target, options);
+type ScanOptions = Omit<SemgrepScanOptions, "language"> & {
+    language?: Language;
+}
+
+async function runScan(target: string, options: ScanOptions) {
+    let results: Issue[] = [];
+    
+    if(options.language) {
+        results = await scan(target, {
+            ...options,
+            language: options.language
+        });
+    } else {
+        const detectedLanguages = Array.from(detectProgrammingLanguages(target));
+
+        let _result = await Promise.all(
+            detectedLanguages.filter((item): item is Language => !!item).map((lang) => scan(target, {
+                ...options,
+                language: lang
+            }))
+        )
+        results = _result.flat();
+    }
+    
     if(options.verbose) {
         console.debug(results);
     }
@@ -40,7 +64,8 @@ async function dispatchPrCreation(issue: IssueItem, diff: string, repository: Re
     }
 }
 
-async function _scan(target: string, options: SemgrepScanOptions, completionClientOptions: CompletionClientOptions) {
+
+async function _scan(target: string, options: ScanOptions, completionClientOptions: CompletionClientOptions) {
     const id = nanoid(6);
     
     const issues = await runScan(target, options);
@@ -52,9 +77,9 @@ async function _scan(target: string, options: SemgrepScanOptions, completionClie
             const proc = await spawnLlamaCppServer();
         }
         const diffs = await Promise.all(
-            issues.map(issue => dispatchCodeGen({ ...issue, uid: nanoid(6), scanId: id }, completionClientOptions))
+            issues.map(issue => dispatchCodeGen({ ...issue, severity: issue.severity??"low",  uid: nanoid(6), scanId: id }, completionClientOptions))
         );
-        return diffs
+        return { diffs, id }
     } catch(error) {
         throw new Error(`There was an error starting the language model server: ${error}`);
     }
@@ -68,7 +93,8 @@ export interface ScanCommandParams {
     ruleSets?: string[];
     local?: boolean;
     api_key?: string;
-    no_metrics: boolean;
+    no_logging: boolean;
+    no_tel: boolean;
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
@@ -81,27 +107,44 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         await checkLocalConfig();
     }
 
-    if(!params.api_key && !params.no_metrics) {
-        throw new Error("API key is required when logging metrics to the Pensar console. Pass in `--no-metrics` if you do not wish to log to the Pensar console.");
+    let apiKey = params.api_key ?? process.env.PENSAR_API_KEY;
+
+    if(!apiKey && !params.no_logging) {
+        throw new Error("API key is required when logging metrics to the Pensar console. Pass in `--no-logging` if you do not wish to log scan results to the Pensar console.");
     }
-    
+
     const target = params.target??process.cwd();
 
     let clearLoader = renderScanLoader();
 
-    const diffs = await _scan(target, {
+    const scanResult = await _scan(target, {
         verbose: params.verbose,
-        language: params.language??"ts", // TODO: auto-detect or pass some sane default (pass multiple?)
+        language: params.language,
         ruleSets: params.ruleSets
-    }, { local: params.local, pensarApiKey: params.api_key });
+    }, { local: params.local, pensarApiKey: apiKey });
     
-    if(!diffs) {
+    if(!scanResult) {
         clearLoader.unmount();
         console.log("Nice. No issues found.");
         return;
     }
 
+    const { diffs, id } = scanResult;
+
     const endTime = Date.now();
+    
+    if(!params.no_logging) {
+        try {
+            let repo = await getGitRemoteOrigin(target);
+            await logScanResultsToConsole(diffs[0].issue.scanId, diffs.map(d => d.issue), {
+                repository: { name: repo.name, owner: repo.owner }, startTime, endTime, apiKey: apiKey as string
+            });
+        } catch (error) {
+            // TODO: write to logs
+            console.error(`Error logging scan to Pensar console: `, error);
+        }
+    }
+
     clearLoader.unmount();
 
     if(params.github) {
@@ -116,10 +159,10 @@ export async function scanCommandHandler(params: ScanCommandParams) {
 
         
         let [owner, name] = repo.split("/");
-        if(!params.no_metrics) {
+        if(!params.no_logging) {
             try {
                 await logScanResultsToConsole(diffs[0].issue.scanId, diffs.map(d => d.issue), {
-                    repository: { name: name, owner: owner }, startTime, endTime, apiKey: params.api_key as string
+                    repository: { name: name, owner: owner }, startTime, endTime, apiKey: apiKey as string
                 });
             } catch(error) {
                 console.error("Error logging scan results to Pensar console: ", error);
@@ -127,10 +170,15 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         }
         console.log("--- Creating Github PRs ---");
         await Promise.all(
-            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, pensarApiKey: params.api_key }, params.no_metrics))
+            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, pensarApiKey: apiKey }, params.no_logging))
         );
         console.log(`Successfully created ${diffs.length} PRs`);
     } else {
-        displayDiffs(diffs);
+        displayDiffs({
+            diffs: diffs,
+            scanId: id,
+            noLogging: params.no_logging,
+            apiKey: apiKey
+        });
     }
 }

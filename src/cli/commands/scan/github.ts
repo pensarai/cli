@@ -1,9 +1,43 @@
 import { Octokit } from "@octokit/action";
 import type { Issue } from "@pensar/semgrep-node";
-import type { IssueItem, Repository } from "../../lib/types";
-import { applyDiffs } from "../utils";
-import { getPrSummary, type CompletionClientOptions } from "../completions";
+import type { IssueItem, Repository } from "../../../lib/types";
+import { applyDiffs } from "../../utils";
+import { getPrSummary, type CompletionClientOptions } from "../../completions";
 import { nanoid } from "nanoid";
+
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+interface GitRemote {
+  url: string;
+  owner: string;
+  name: string;
+}
+
+export async function getGitRemoteOrigin(path: string = '.'): Promise<GitRemote> {
+  try {
+    const { stdout } = await execAsync('git remote get-url origin', { cwd: path });
+    const url = stdout.trim();
+    
+    let owner = '';
+    let name = '';
+
+    if (url.startsWith('https://')) {
+      [ owner, name ] = url.replace("https://github.com/", "").split("/");
+
+    } else if (url.startsWith('git@')) {
+      [ owner, name ] = url.replace("git@github.com:", "").replace(".git", "").split("/");
+    }
+
+    return { url, owner, name };
+  } catch (error) {
+    console.error('Error getting Git remote:', error);
+    throw error;
+  }
+}
+
 
 async function createPRWithChanges(
     octokit: Octokit,

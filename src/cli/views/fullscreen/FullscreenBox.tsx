@@ -9,6 +9,7 @@ export const FullscreenBox = forwardRef<DOMElement, BoxProps>(
     function FullscreenBox(props, ref) {
         useInput(() => {});
         const { height, width } = useScreenSize();
+             // @pensar-ok
         return <Box ref={ref} height={height} width={width} {...props}/>
     }
 );

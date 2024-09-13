@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { render, Box, Text, useStdin, useInput, Spacer, measureElement } from "ink";
-import { ignoreIssue, processFileWithDiffs } from "../commands/apply-patch";
+import { ignoreIssue, processFileWithDiffs } from "../commands/scan/apply-patch";
 import Spinner from "ink-spinner";
 import { withFullScreen } from "./fullscreen/withFullScreen";
 import { parseUnixDiff } from "./parseDiff";
+import { updateIssueCloseStatus } from "../metrics";
 const DiffListItem = ({
   diff,
-  active
+  active,
+  loading
 }) => {
   return /*#__PURE__*/React.createElement(Box, {
     flexDirection: "row"
@@ -17,11 +19,16 @@ const DiffListItem = ({
     color: "greenBright"
   }, "\u2713"), diff.status === "ignored" && /*#__PURE__*/React.createElement(Text, {
     color: "yellow"
-  }, "~"));
+  }, "~"), loading && /*#__PURE__*/React.createElement(Text, {
+    color: "blue"
+  }, /*#__PURE__*/React.createElement(Spinner, {
+    type: "dots"
+  })));
 };
 const DiffDisplay = ({
   diff
 }) => {
+  const ref = useRef(null);
   const formatDiff = input => {
     input = input.replace("<diff>", "").replace("</diff>", "");
     let formattedDiff = parseUnixDiff(input);
@@ -29,7 +36,8 @@ const DiffDisplay = ({
   };
   return /*#__PURE__*/React.createElement(Box, {
     flexDirection: "column",
-    gap: 2
+    gap: 2,
+    ref: ref
   }, /*#__PURE__*/React.createElement(Text, {
     color: "gray"
   }, diff.issue.location), /*#__PURE__*/React.createElement(Box, {
@@ -37,7 +45,9 @@ const DiffDisplay = ({
   }, formatDiff(diff.diff).split("\n").map((s, i) => /*#__PURE__*/React.createElement(Text, {
     key: `${diff.issue.uid}-diff-line-${i}`,
     color: s[0] === "-" ? "red" : "green"
-  }, s))));
+  }, s))), /*#__PURE__*/React.createElement(Box, {
+    flexShrink: 1
+  }, /*#__PURE__*/React.createElement(Text, null, diff.issue.message)));
 };
 const Header = ({
   title
@@ -47,57 +57,71 @@ const Header = ({
   useEffect(() => {
     if (ref.current) {
       const _dims = measureElement(ref.current);
-      console.log(_dims);
       setDims(_dims);
     }
   }, [ref.current]);
   return /*#__PURE__*/React.createElement(Box, {
     width: "100%",
+    borderStyle: "round",
     ref: ref
   }, ref.current && dims && /*#__PURE__*/React.createElement(Text, {
-    backgroundColor: "#626e8c",
     color: "white",
     bold: true
-  }, `${title}${" ".repeat(dims.width - title.length)}`));
+  }, title));
 };
 const Main = ({
-  diffs
+  diffs,
+  scanId,
+  noMetrics,
+  apiKey
 }) => {
+  if (!noMetrics && !apiKey) {
+    throw new Error("Pensar API key required if metrics logging is not disabled");
+  }
   const {
     setRawMode
   } = useStdin();
   const [currentDiffIdx, setCurrenDiffIdx] = useState(0);
   const [diffArray, setDiffArray] = useState(diffs);
+  const [loading, setLoading] = useState(null);
+  const [error, setError] = useState(null);
   useEffect(() => {
     setRawMode(true);
     return () => {
       setRawMode(false);
     };
-  });
-  const applyOrIgnoreDiff = async (index, status) => {
-    let diff = diffArray[index];
-    // TODO: revert change if status already set
-    if (diff.status) {
-      return;
-    }
-    if (status === "applied") {
+  }, []);
+  const showError = e => {
+    setError(e);
+    setTimeout(() => {
+      setError(null);
+    }, 1000);
+  };
+  const applyOrIgnoreDiff = async diffAction => {
+    let {
+      diff,
+      action
+    } = diffAction;
+    if (action === "apply") {
       try {
         await processFileWithDiffs(diff.issue.location, diff.diff);
-        updateDiffStatus(index, status);
       } catch (error) {
-        // TODO: display error to user
+        // TODO: display error to user & log 
+        // setError(String(error));
+        showError(String(error));
       }
     }
-    if (status === "ignored") {
+    if (action === "ignore") {
       try {
         await ignoreIssue(diff.issue);
-        updateDiffStatus(index, status);
       } catch (error) {
-        // TODO: display error to user or kill process and log error gracefully
+        // TODO: display error to user or and log error gracefully
+        showError(String(error));
       }
     }
   };
   const updateDiffStatus = async (index, status) => {
+    setLoading(index);
     let diff = diffArray[index];
     diff = {
       ...diff,
@@ -110,23 +134,39 @@ const Main = ({
       return d;
     });
     setDiffArray(newDiffArray);
+    await applyOrIgnoreDiff({
+      diff,
+      action: status === "applied" ? "apply" : "ignore"
+    });
+    if (!noMetrics) {
+      try {
+        await updateIssueCloseStatus(scanId, diff.issue.uid, {
+          closeMethod: status === "applied" ? "manual" : "ignore",
+          apiKey: apiKey
+        });
+      } catch (error) {
+        // TODO: log error
+        showError(String(error));
+      }
+    }
+    setLoading(null);
   };
   useInput(async (input, key) => {
     if (key.upArrow) {
-      if (currentDiffIdx !== 0) {
+      if (currentDiffIdx > 0) {
         setCurrenDiffIdx(prev => prev - 1);
       }
     }
     if (key.downArrow) {
-      if (currentDiffIdx < diffs.length - 1) {
+      if (currentDiffIdx < diffArray.length - 1) {
         setCurrenDiffIdx(prev => prev + 1);
       }
     }
     if (input === "a") {
-      await applyOrIgnoreDiff(currentDiffIdx, "applied");
+      updateDiffStatus(currentDiffIdx, "applied");
     }
     if (input === "i") {
-      await applyOrIgnoreDiff(currentDiffIdx, "ignored");
+      updateDiffStatus(currentDiffIdx, "ignored");
     }
   });
   return /*#__PURE__*/React.createElement(Box, {
@@ -142,6 +182,7 @@ const Main = ({
   }, /*#__PURE__*/React.createElement(Header, {
     title: "Issues"
   }), diffArray.map((diff, i) => /*#__PURE__*/React.createElement(DiffListItem, {
+    loading: loading === i,
     active: i === currentDiffIdx,
     diff: diff,
     key: `diff-list-item-${i}`
@@ -152,7 +193,12 @@ const Main = ({
     title: "Apply change to fix"
   }), /*#__PURE__*/React.createElement(DiffDisplay, {
     diff: diffArray[currentDiffIdx]
-  }))), /*#__PURE__*/React.createElement(Spacer, null), /*#__PURE__*/React.createElement(Box, {
+  }))), /*#__PURE__*/React.createElement(Spacer, null), error && /*#__PURE__*/React.createElement(Box, {
+    flexDirection: "row"
+  }, /*#__PURE__*/React.createElement(Text, {
+    backgroundColor: "red",
+    color: "white"
+  }, error)), !error && /*#__PURE__*/React.createElement(Box, {
     flexDirection: "row",
     columnGap: 1
   }, /*#__PURE__*/React.createElement(Text, {
@@ -179,7 +225,7 @@ const Main = ({
     color: "white"
   }, "i"), " ignore change")));
 };
-const LoadingTextOptions = ["  Hunting vulnerabilities 🤠", "  Hacking the hackers 🦹‍♂️", "  Sniffing out security flaws 🕵️", "  Probing defenses 🛡️", "  Debugging the matrix 🕴️", "  Poking holes in digital armor 🧀", "  Herding cyber cats 🐱‍💻"];
+const LoadingTextOptions = ["  Hunting vulnerabilities 🤠", "  Sniffing out security flaws 🕵️", "  Probing defenses 🛡️", "  Debugging the matrix 🕴️", "  Poking holes in digital armor 🧀", "  Herding cyber cats 🐱‍💻"];
 const randomLoadingTextOption = () => {
   let index = Math.floor(Math.random() * (LoadingTextOptions.length - 1));
   return LoadingTextOptions[index];
@@ -208,8 +254,11 @@ export function renderScanLoader() {
     unmount
   };
 }
-export async function renderMainView(diffs) {
+export async function renderMainView(props) {
   withFullScreen(/*#__PURE__*/React.createElement(Main, {
-    diffs: diffs
+    diffs: props.diffs,
+    scanId: props.scanId,
+    noMetrics: props.noMetrics,
+    apiKey: props.apiKey
   })).start();
 }
