@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { scanCommandHandler, type ScanCommandParams } from "./commands/scan";
 import { loginCommandHandler } from "./commands/login";
+import { setTokenCommandHandler } from "./commands/set-token";
 
 export async function initCli() {
 
@@ -37,13 +38,19 @@ export async function initCli() {
         loginCommandHandler();
     });
 
-    
+    program.command("set-token [value]")
+    .description("Set the Pensar API key. Optionally pass in --name to set the key under a name (useful if using multiple workspaces or API keys).")
+    .option("--name <name>", "Optional name to assign to the API key.")
+    .action((value, options, command) => {
+        setTokenCommandHandler({
+            value: value,
+            name: options.name
+        })
+    });
+
+
 
     // TODO: implement model weight and inference server binary downloading for use w/ `--local`
-    // program.command("init-local")
-    // .description("Download model weights and inference server binary for local Pensar usage.")
-    // .action()
-
     // TODO: implement program.command("list-rules") and add to docs
 
     await program.parseAsync(process.argv);
