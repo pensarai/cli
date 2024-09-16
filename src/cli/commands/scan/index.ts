@@ -28,7 +28,7 @@ async function runScan(target: string, options: ScanOptions) {
         });
     } else {
         const detectedLanguages = Array.from(detectProgrammingLanguages(target));
-
+        console.log(detectedLanguages);
         let _result = await Promise.all(
             detectedLanguages.filter((item): item is Language => !!item).map((lang) => scan(target, {
                 ...options,
@@ -39,12 +39,13 @@ async function runScan(target: string, options: ScanOptions) {
     }
     
     if(options.verbose) {
-        console.debug(results);
+        console.log(results);
     }
     return results
 }
 
 async function dispatchCodeGen(issue: IssueItem, completionClientOptions: CompletionClientOptions) {
+    console.log(issue)
     const contents = await getFileContents(issue.location);
     const diff = await codeGenDiff(contents, issue, completionClientOptions);
     return { diff, issue }
@@ -70,6 +71,7 @@ async function _scan(target: string, options: ScanOptions, completionClientOptio
     const id = nanoid(6);
     
     const issues = await runScan(target, options);
+    console.log(issues)
     if(issues.length === 0) {
         return
     }
