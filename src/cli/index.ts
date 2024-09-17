@@ -37,8 +37,9 @@ export async function initCli() {
 
     program.command("login")
     .description("Opens a browser window at https://console.pensar.dev/login.")
-    .action(() => {
-        loginCommandHandler();
+    .option("--no-browser", "Will not automatically open a browser window.", false)
+    .action((options, command) => {
+        loginCommandHandler(options.noBrowser);
     });
 
     program.command("set-token [value]")
