@@ -1,3 +1,5 @@
+<img width="1122" alt="readme-image" src="https://github.com/user-attachments/assets/01a146a1-b8f3-4efc-b74f-c731ee3dbe39">
+
 # Pensar CLI
 Find and automatically fix security vulnerabilities in your codebase. Open source and free to get started.
 
