@@ -19,7 +19,7 @@ async function downloadAndExtractLlamaCpp(): Promise<void> {
   let downloadUrl: string;
 
   if (platform === 'darwin') {
-    downloadUrl = 'https://github.com/ggerganov/llama.cpp/releases/download/b3772/llama-b3772-bin-macos-arm64.zip';
+    downloadUrl = 'https://objects.githubusercontent.com/github-production-release-asset-2e65be/612354784/012b84d1-5140-491f-a289-c5765f0ed804?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240917%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240917T020901Z&X-Amz-Expires=300&X-Amz-Signature=b5a9cf4b5e77396937320cc835873f2eff49e18d9a09d743df5f307516b98b7e&X-Amz-SignedHeaders=host&actor_id=28548083&key_id=0&repo_id=612354784&response-content-disposition=attachment%3B%20filename%3Dllama-b3772-bin-macos-arm64.zip&response-content-type=application%2Foctet-stream';
   } else if (platform === 'linux') {
     downloadUrl = 'https://objects.githubusercontent.com/github-production-release-asset-2e65be/612354784/3c7aad5f-aba4-4d48-9902-2a030d7f9c5f?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20240917%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240917T012702Z&X-Amz-Expires=300&X-Amz-Signature=e85fe5ab304d759b3e487a9662c0bbb96569c919a2a5f99d573ec13c2bffddb6&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=612354784&response-content-disposition=attachment%3B%20filename%3Dllama-b3772-bin-ubuntu-x64.zip&response-content-type=application%2Foctet-stream';
   } else {
