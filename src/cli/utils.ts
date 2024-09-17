@@ -1,3 +1,4 @@
+import os from "os";
 import path from "path";
 import { readdir } from "node:fs/promises";
 import fs from "fs";
@@ -77,8 +78,9 @@ export const getFileContents = async(path: string) => {
     return contents
 }
 
-const checkForLocalModels = async () => {
-    const modelDirPath = path.resolve(__dirname, "../server/models");
+export const checkForLocalModels = async () => {
+    const homeDir = os.homedir();
+    const modelDirPath = path.join(homeDir, '.pensar', 'models');
     const files = await readdir(modelDirPath);
     for(let i=0;i<files.length;i++) {
         let file = files[i];
@@ -89,9 +91,11 @@ const checkForLocalModels = async () => {
     return false
 }
 
-const checkForInferenceServerBinary = async () => {
-    const serverBinaryPath = path.resolve(__dirname, "../server/lib");
-    const files = await readdir(serverBinaryPath);
+export const checkForInferenceServerBinary = async () => {
+    const homeDir = os.homedir();
+    const serverDir = path.resolve(homeDir, ".pensar", "server");
+    fs.mkdirSync(serverDir, { recursive: true });
+    const files = await readdir(serverDir);
     if(files[0] === "llama-server") {
         return true
     }

@@ -1,10 +1,12 @@
+import * as os from "os";
 import path from "path";
 
 export const modelLocation = () => {
-    // return path.resolve(path.join(import.meta.dir, "models/DeepSeek-Coder-V2-Lite-Instruct-Q6_K.gguf"));
-    return path.resolve(path.join(__dirname, "models/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf"));
+    const homeDir = os.homedir();
+    return path.resolve(homeDir, ".pensar", "models", "meta-llama-3.1-8b-instruct-Q6_K.gguf");
 }
 
 export const serverBinaryLocation = () => {
-    return path.resolve(path.join(__dirname, "lib/llama-server"));
+    const homeDir = os.homedir();
+    return path.resolve(homeDir, ".pensar", "server", "llama-server");
 }
