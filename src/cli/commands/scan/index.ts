@@ -3,7 +3,7 @@ import { codeGenDiff, type CompletionClientOptions } from "../../completions";
 import { createPr, getGitRemoteOrigin } from "./github";
 import type { IssueItem, Repository } from "../../../lib/types";
 import { spawnLlamaCppServer } from "../../../server";
-import { checkLocalConfig, getFileContents } from "../../utils";
+import { checkForInferenceServerBinary, checkForLocalModels, checkLocalConfig, getFileContents } from "../../utils";
 import { displayDiffs } from "./apply-patch";
 import { nanoid } from "nanoid";
 import { logScanResultsToConsole, updateIssueCloseStatus } from "../../remote-logging";
@@ -11,6 +11,10 @@ import { renderScanLoader } from "../../views/out";
 import { detectProgrammingLanguages } from "./utils";
 import { readFromConfigFile } from "../set-token";
 import { writeToLog } from "@/lib/logs";
+import { confirm } from "@inquirer/prompts";
+import { downloadModelWeights } from "@/server/download-model";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { downloadAndExtractLlamaCpp } from "@/server/download-server-bin";
 
 // TODO: respect .gitignore when scanning
 
@@ -71,17 +75,20 @@ async function _scan(target: string, options: ScanOptions, completionClientOptio
     const id = nanoid(6);
     
     const issues = await runScan(target, options);
-    console.log(issues)
     if(issues.length === 0) {
         return
     }
     try {
+        let proc: ChildProcessWithoutNullStreams | undefined = undefined;
         if(completionClientOptions.local) {
-            const proc = await spawnLlamaCppServer();
+            proc = await spawnLlamaCppServer();
         }
         const diffs = await Promise.all(
             issues.map(issue => dispatchCodeGen({ ...issue, severity: issue.severity??"low",  uid: nanoid(6), scanId: id }, completionClientOptions))
         );
+        if(proc) {
+            proc.kill(0);
+        }
         return { diffs, id }
     } catch(error) {
         throw new Error(`There was an error starting the language model server: ${error}`);
@@ -106,7 +113,29 @@ export async function scanCommandHandler(params: ScanCommandParams) {
     const startTime = Date.now();
 
     if(params.local) {
-        await checkLocalConfig();
+        // TODO: handle local mode in github actions (model should be included in image)
+        try {
+            let modelsExist = await checkForLocalModels();
+            if(!modelsExist) {
+                console.log("Model weights not found in ~/.pensar/models. Pensar must download models weights when running in local mode.");
+                const answer = await confirm({
+                    message: "Would you like to download model weights?"
+                });
+                if(answer === true) {
+                    await downloadModelWeights("https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf", "meta-llama-3.1-8b-instruct-Q6_K.gguf");
+                } else {
+                    process.exit(0);
+                }
+            }
+            let serverExists = await checkForInferenceServerBinary();
+            if(!serverExists) {
+                console.log("Downloading inference server binary.");
+                await downloadAndExtractLlamaCpp();
+            }
+        } catch(e) {
+            console.error(e);
+            process.exit(1);
+        }
     }
 
     let apiKey: string | undefined = params.api_key ?? process.env.PENSAR_API_KEY;
