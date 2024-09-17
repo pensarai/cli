@@ -12,9 +12,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Run scan
-        uses: pensarai/pensar-local@main
-        with:
-          language: "ts"
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        uses: pensarai/cli@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PENSAR_API_KEY: ${{ secrets.PENSAR_API_KEY }}
