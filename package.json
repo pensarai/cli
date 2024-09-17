@@ -1,7 +1,7 @@
 {
   "name": "@pensar/cli",
-  "version": "1.0.1",
-  "description": "AI security engineer. Can be run fully local.",
+  "version": "1.1.0",
+  "description": "Automatically fix security vulnerabilities.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "type": "module",
@@ -24,7 +24,7 @@
     "url": "git+https://github.com/pensarai/pensar-local.git"
   },
   "author": "PensarAI, Inc.",
-  "license": "MIT",
+  "license": "LGPL-2.1-only",
   "bugs": {
     "url": "https://github.com/pensarai/pensar-local/issues"
   },
