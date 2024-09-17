@@ -57,10 +57,5 @@ export async function initCli() {
         listRulesetsCommandHandler();
     })
 
-
-
-    // TODO: implement model weight and inference server binary downloading for use w/ `--local`
-    // TODO: implement program.command("list-rules") and add to docs
-
     await program.parseAsync(process.argv);
 }
