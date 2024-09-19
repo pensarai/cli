@@ -28,5 +28,6 @@
     },
     "outDir": "dist",
     "rootDir": "src",
-  }
+  },
+  "exclude": ["vitest.config.ts", "dist"]
 }

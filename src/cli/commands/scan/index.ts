@@ -15,6 +15,8 @@ import { confirm } from "@inquirer/prompts";
 import { downloadModelWeights } from "@/server/download-model";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { downloadAndExtractLlamaCpp } from "@/server/download-server-bin";
+import cliProgress from "cli-progress";
+import colors from "ansi-colors";
 
 // TODO: respect .gitignore when scanning
 
@@ -32,7 +34,6 @@ async function runScan(target: string, options: ScanOptions) {
         });
     } else {
         const detectedLanguages = Array.from(detectProgrammingLanguages(target));
-        console.log(detectedLanguages);
         let _result = await Promise.all(
             detectedLanguages.filter((item): item is Language => !!item).map((lang) => scan(target, {
                 ...options,
@@ -49,10 +50,15 @@ async function runScan(target: string, options: ScanOptions) {
 }
 
 async function dispatchCodeGen(issue: IssueItem, completionClientOptions: CompletionClientOptions) {
-    console.log(issue)
     const contents = await getFileContents(issue.location);
-    const diff = await codeGenDiff(contents, issue, completionClientOptions);
-    return { diff, issue }
+    try {
+        const diff = await codeGenDiff(contents, issue, completionClientOptions);
+        return { diff, issue }
+    } catch(error) {
+        // console.log(`Error generating code diff for issue: ${JSON.stringify(issue, undefined, 2)}`)
+        // throw error
+        return { diff: undefined, issue }
+    }
 }
 
 async function dispatchPrCreation(issue: IssueItem, diff: string, repository: Repository, completionClientOptions: CompletionClientOptions, noMetrics: boolean) {
@@ -70,29 +76,97 @@ async function dispatchPrCreation(issue: IssueItem, diff: string, repository: Re
     }
 }
 
+type GenerateDiffsParams = {
+    issues: Issue[];
+    scanId: string;
+    completionClientOptions: CompletionClientOptions;
+};
 
-async function _scan(target: string, options: ScanOptions, completionClientOptions: CompletionClientOptions) {
+async function executePromisesWithProgress<T>(promises: Promise<T>[]): Promise<T[]> {
+    const progressBar = new cliProgress.SingleBar({
+        format: colors.greenBright('{bar}') + '| {percentage}% || {value}/{total} Fixes generated',
+    }, cliProgress.Presets.rect);
+
+    progressBar.start(promises.length, 0);
+  
+    let completed = 0;
+  
+    const wrappedPromises = promises.map(async (promise) => {
+      const result = await promise;
+      completed++;
+      progressBar.update(completed);
+      return result;
+    });
+  
+    const results = await Promise.all(wrappedPromises);
+  
+    progressBar.stop();
+    return results;
+  }
+
+async function _generateDiffs(params: GenerateDiffsParams) {
+    let issues = params.issues;
+
+    let diffs = await executePromisesWithProgress(
+        issues.map((issue) => dispatchCodeGen({
+            ...issue,
+            scanId: params.scanId,
+            uid: nanoid(6)
+        }, params.completionClientOptions))
+    );
+
+    return diffs
+}
+
+async function generateFixes(issues: Issue[], completionClientOptions: CompletionClientOptions) {
     const id = nanoid(6);
     
+    if(completionClientOptions.local) {
+        let proc: ChildProcessWithoutNullStreams | undefined = undefined;
+        
+        try {
+            proc = await spawnLlamaCppServer();
+        } catch(error) {
+            console.error("There was an error starting the language model server.");
+            process.exit(1);
+        }
+
+        const diffs = await _generateDiffs({
+            issues: issues,
+            scanId: id,
+            completionClientOptions: completionClientOptions
+        });
+
+        if(proc) {
+            proc.kill(0);
+        }
+
+        return { diffs, id }
+    }
+
+    try {
+
+        const diffs = await _generateDiffs({
+            issues: issues,
+            scanId: id,
+            completionClientOptions: completionClientOptions
+        });
+
+        return { diffs, id }
+
+    } catch(error) {
+        console.error(error);
+        process.exit(1);
+    }
+}
+
+
+async function _scan(target: string, options: ScanOptions) {
     const issues = await runScan(target, options);
     if(issues.length === 0) {
         return
     }
-    try {
-        let proc: ChildProcessWithoutNullStreams | undefined = undefined;
-        if(completionClientOptions.local) {
-            proc = await spawnLlamaCppServer();
-        }
-        const diffs = await Promise.all(
-            issues.map(issue => dispatchCodeGen({ ...issue, severity: issue.severity??"low",  uid: nanoid(6), scanId: id }, completionClientOptions))
-        );
-        if(proc) {
-            proc.kill(0);
-        }
-        return { diffs, id }
-    } catch(error) {
-        throw new Error(`There was an error starting the language model server: ${error}`);
-    }
+    return issues;
 }
 
 export interface ScanCommandParams {
@@ -109,7 +183,6 @@ export interface ScanCommandParams {
 }
 
 export async function scanCommandHandler(params: ScanCommandParams) {
-    
     const startTime = Date.now();
 
     if(params.local) {
@@ -156,7 +229,7 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         verbose: params.verbose,
         language: params.language,
         ruleSets: params.ruleSets
-    }, { local: params.local, pensarApiKey: apiKey });
+    });
     
     if(!scanResult) {
         clearLoader.unmount();
@@ -164,7 +237,9 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         return;
     }
 
-    const { diffs, id } = scanResult;
+    clearLoader.unmount();
+
+    const { diffs, id } = await generateFixes(scanResult, { local: params.local, pensarApiKey: apiKey });
 
     const endTime = Date.now();
     
@@ -178,8 +253,6 @@ export async function scanCommandHandler(params: ScanCommandParams) {
             console.error(`Error logging scan to Pensar console: `, error);
         }
     }
-
-    clearLoader.unmount();
 
     if(params.github) {
         let token = process.env.GITHUB_TOKEN;
@@ -204,7 +277,8 @@ export async function scanCommandHandler(params: ScanCommandParams) {
         }
         console.log("--- Creating Github PRs ---");
         await Promise.all(
-            diffs.map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, pensarApiKey: apiKey }, params.no_logging))
+            // TODO: log when an autofix was not able to be generated due to inference api errors
+            diffs.filter(d => d.diff !== undefined).map(d => dispatchPrCreation(d.issue, d.diff, { owner, name }, { local: params.local, pensarApiKey: apiKey }, params.no_logging))
         );
         console.log(`Successfully created ${diffs.length} PRs`);
     } else {

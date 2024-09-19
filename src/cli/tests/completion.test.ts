@@ -59,7 +59,6 @@ describe("Test completions endpoint", () => {
 
     test("Diff generation", async () => {
         const diff = await codeGenDiff(fileContents, mockIssue, { local: false });
-        console.log(diff);
         expect(diff.length).toBeGreaterThan(0);
     }, { timeout: 10_000*10 });
-})
+});

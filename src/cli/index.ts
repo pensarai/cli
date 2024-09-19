@@ -17,8 +17,8 @@ export async function initCli() {
     .option("--github", "Specify if the CLI is being run in a github action. This will use generated fixes to create PRs instead of presenting the user the ability to locally apply patches.")
     .option("--rulesets <rulesets...>", "Specify rulesets to scan against. Run `pensar list-rules` to view a full list of rulesets.")
     .option("--verbose", "Verbosity flag")
-    .option("--no-logging", "Whether to prevent scan results from being logged to the Pensar console. Default false.", false)
-    .option("--no-tel", "Whether to turn off telemetry. Default false.", false)
+    .option("--disable-logging", "Whether to prevent scan results from being logged to the Pensar console. Default false.")
+    .option("--disable-tel", "Whether to turn off telemetry. Default false.")
     .action(async (target, options, command) => {
         const params: ScanCommandParams = {
             target: target,
@@ -29,8 +29,8 @@ export async function initCli() {
             api_key: options.apiKey,
             api_key_name: options.apiKeyName,
             verbose: options.verbose,
-            no_logging: options.noLogging,
-            no_tel: options.noTel
+            no_logging: options.disableLogging,
+            no_tel: options.disableTel
         };
         await scanCommandHandler(params);
     });

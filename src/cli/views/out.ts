@@ -42,7 +42,9 @@ const DiffDisplay = ({
     color: "gray"
   }, diff.issue.location), /*#__PURE__*/React.createElement(Box, {
     flexDirection: "column"
-  }, formatDiff(diff.diff).split("\n").map((s, i) => /*#__PURE__*/React.createElement(Text, {
+  }, !diff.diff && /*#__PURE__*/React.createElement(Text, {
+    color: "red"
+  }, "There was an error generating this auto-fix."), diff.diff && formatDiff(diff.diff).split("\n").map((s, i) => /*#__PURE__*/React.createElement(Text, {
     key: `${diff.issue.uid}-diff-line-${i}`,
     color: s[0] === "-" ? "red" : "green"
   }, s))), /*#__PURE__*/React.createElement(Box, {
@@ -102,6 +104,9 @@ const Main = ({
       diff,
       action
     } = diffAction;
+    if (!diff.diff) {
+      return;
+    }
     if (action === "apply") {
       try {
         await processFileWithDiffs(diff.issue.location, diff.diff);

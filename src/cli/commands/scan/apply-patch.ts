@@ -6,7 +6,7 @@ import type { IssueItem, MainViewProps } from "@/lib/types";
 import { renderMainView } from "../../views/out";
 
 export type Diff = {
-    diff: string;
+    diff?: string;
     issue: IssueItem;
     status?: "applied" | "ignored";
 };

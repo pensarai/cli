@@ -57,6 +57,11 @@ const DiffDisplay = ({ diff }: { diff: Diff }) => {
             </Text>
             <Box flexDirection="column">
                 {
+                    !diff.diff &&
+                    <Text color={"red"}>There was an error generating this auto-fix.</Text>
+                }
+
+                {   diff.diff &&
                     formatDiff(diff.diff).split("\n").map((s, i) => (
                         <Text key={`${diff.issue.uid}-diff-line-${i}`} color={s[0] === "-" ? "red" : "green"}>{ s }</Text>
                     ))
@@ -130,6 +135,11 @@ const Main = ({ diffs, scanId, noLogging, apiKey }: MainViewProps) => {
 
     const applyOrIgnoreDiff = async (diffAction: DiffActionToApply) => {
         let { diff, action } = diffAction;
+        
+        if(!diff.diff) {
+            return
+        }
+
         if(action === "apply") {
             try {
                 await processFileWithDiffs(diff.issue.location, diff.diff);
@@ -153,6 +163,7 @@ const Main = ({ diffs, scanId, noLogging, apiKey }: MainViewProps) => {
     const updateDiffStatus = async (index: number, status: Diff['status']) => {
         setLoading(index);
         let diff = diffArray[index];
+
         diff = {
             ...diff,
             status: status

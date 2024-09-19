@@ -40,7 +40,7 @@ const getCompletionClient = (options: CompletionClientOptions) => {
     }
     const client = new OpenAI({
         baseURL: baseUrl,
-        apiKey: options.local ? "sk-no-key-required" : pensarApiKey
+        apiKey: options.local ? "sk-no-key-required" : pensarApiKey,
     });
     return client
 }
@@ -99,7 +99,7 @@ async function getCompletion(systemMessage: string, userMessage: string, clientO
                 { role: "system", content: systemMessage },
                 { role: "user", content: userMessage }
             ],
-            max_tokens: 4000 - numTokens(userMessage),
+            max_tokens: 6000 - numTokens(userMessage),
             temperature: 0.0,
         }
     );
