@@ -239,6 +239,9 @@ export async function scanCommandHandler(params: ScanCommandParams) {
 
     clearLoader.unmount();
 
+    console.log(`\nFound ${scanResult.length} vunlnerabilities.`);
+    console.log("\n");
+
     const { diffs, id } = await generateFixes(scanResult, { local: params.local, pensarApiKey: apiKey });
 
     const endTime = Date.now();
