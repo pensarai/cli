@@ -1,4 +1,4 @@
-<img width="1122" alt="readme-image" src="https://github.com/user-attachments/assets/01a146a1-b8f3-4efc-b74f-c731ee3dbe39">
+This repo has since been archived. Please see Apex: https://github.com/pensarai/apex
 
 # Pensar CLI
 Find and automatically fix security vulnerabilities in your codebase. Open source and free to get started.
@@ -29,3 +29,4 @@ Pensar is built on top of open source static analysis tools to detect vulnerabil
 When a vulnerability is found, we then use an LLM to generate changes that can be applied to your project to close said vulnerability.
 
 You can either use our API endpoint for generating auto-fixes or run the cli in local mode with the `--local` flag set. Running in local mode will download model weights to your machine and spin up a local inference server. Read more about [local mode here.](https://docs.pensar.dev/misc/local-mode).
+
