@@ -10,7 +10,7 @@ const delay = () => {
 }
 
 const ping = async () => {
-    let response = await fetch("http://localhost:8080/health");
+    let response = await fetch("https://localhost:8080/health");
     if(response.status !== 200) {
         throw new Error("Error loading model");
     }
